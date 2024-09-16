@@ -26,6 +26,7 @@ class CodePopup:
             insertbackground='white'
         )
         self.text_area.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+        self.text_area.config(state=tk.DISABLED)  # This line disables editing
 
         controls_frame = ttk.Frame(self.top)
         controls_frame.pack(pady=10, fill=tk.X)
@@ -66,8 +67,10 @@ class CodePopup:
             self.on_version_change(None)  # Update displayed code
 
     def show_code(self, code, requirements):
+        self.text_area.config(state=tk.NORMAL)  # Temporarily enable editing
         self.text_area.delete('1.0', tk.END)
         self.text_area.insert(tk.INSERT, code)
+        self.text_area.config(state=tk.DISABLED)  # Disable editing again
         self.current_requirements = requirements
 
     def on_version_change(self, event):
