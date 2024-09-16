@@ -2,8 +2,6 @@ import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 from codeaide.ui.input_area import InputArea
 from codeaide.ui.code_popup import CodePopup
-from codeaide.logic.chat_handler import ChatHandler
-from codeaide.utils.cost_tracker import CostTracker
 from codeaide.utils import prompt_utils
 from codeaide.utils.constants import (
     CHAT_WINDOW_WIDTH, CHAT_WINDOW_HEIGHT, CHAT_WINDOW_BG, CHAT_WINDOW_FG,
@@ -11,12 +9,12 @@ from codeaide.utils.constants import (
 )
 
 class ChatWindow:
-    def __init__(self):
+    def __init__(self, chat_handler):
         self.root = tk.Tk()
         self.root.title("CodeAIde")
         self.root.geometry(f"{CHAT_WINDOW_WIDTH}x{CHAT_WINDOW_HEIGHT}")
-        self.cost_tracker = CostTracker()
-        self.chat_handler = ChatHandler(self.cost_tracker)
+        self.chat_handler = chat_handler
+        self.cost_tracker = chat_handler.cost_tracker
         self.setup_ui()
         self.add_to_chat("AI", "I'm a code writing assistant. I can generate and run code for you. What would you like to do?")
 
@@ -91,12 +89,15 @@ class ChatWindow:
                 self.add_to_chat("AI", "Please provide answers to these questions to continue.")
         elif response['type'] == 'code':
             self.add_to_chat("AI", response['message'] + " Opening or updating code in the code window...")
-            if hasattr(self, 'code_popup') and self.code_popup and self.code_popup.top.winfo_exists():
-                self.code_popup.update_with_new_version(response['code'], response.get('requirements', []))
-            else:
-                self.code_popup = CodePopup(self.root, response['code'], response.get('requirements', []), self.chat_handler.run_generated_code)
+            self.update_or_create_code_popup(response)
         elif response['type'] == 'error':
             self.add_to_chat("AI", response['message'])
+
+    def update_or_create_code_popup(self, response):
+        if hasattr(self, 'code_popup') and self.code_popup and self.code_popup.top.winfo_exists():
+            self.code_popup.update_with_new_version(response['code'], response.get('requirements', []))
+        else:
+            self.code_popup = CodePopup(self.root, self.chat_handler.file_handler, response['code'], response.get('requirements', []), self.chat_handler.run_generated_code)
 
     def load_example(self):
         example = prompt_utils.load_example_prompt('decaying_exponential_plot')

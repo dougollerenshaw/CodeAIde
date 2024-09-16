@@ -5,7 +5,7 @@ class FileHandler:
     def __init__(self):
         self.base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         self.output_dir = os.path.join(self.base_dir, "generated_code")
-        self.version = 0
+        self.versions_dict = {}
 
     def clear_output_dir(self):
         print(f"Clearing output directory: {self.output_dir}")
@@ -13,37 +13,40 @@ class FileHandler:
             shutil.rmtree(self.output_dir)
         os.makedirs(self.output_dir)
 
-    def save_code(self, code):
-        self.version += 1
-        file_path = os.path.join(self.output_dir, f"generated_script_{self.version}.py")
-        abs_file_path = os.path.abspath(file_path)
-        print(f"Attempting to save code to: {abs_file_path}")
+    def save_code(self, code, version, version_description, requirements=[]):
+        
+        code_path = os.path.join(self.output_dir, f"generated_script_{version}.py")
+        requirements_path = os.path.join(self.output_dir, f"requirements_{version}.txt")
+        abs_code_path = os.path.abspath(code_path)
+        abs_req_path = os.path.abspath(requirements_path)
+        print(f"Attempting to save code to: {abs_code_path}")
         try:
-            with open(abs_file_path, "w") as file:
+            with open(abs_code_path, "w") as file:
                 file.write(code)
-            print(f"Code saved successfully to: {abs_file_path}")
-            print(f"File exists after save: {os.path.exists(abs_file_path)}")
+            print(f"Code saved successfully to: {abs_code_path}")
+            print(f"Saving associated requirements to: {abs_req_path}")
+            self.save_requirements(requirements, version)
         except Exception as e:
             print(f"Error saving file: {str(e)}")
-        return file_path
+        print(f"Adding version {version} to versions_dict")
+        self.versions_dict[version] = {
+            'version_description': version_description, 
+            'requirements': requirements, 
+            'code_path': abs_code_path, 
+            'requirements_path': abs_req_path
+        }
+        print(f"Current versions dict: {self.versions_dict}")
+        return code_path
 
-    def save_requirements(self, requirements):
-        file_path = os.path.join(self.output_dir, f"requirements_{self.version}.txt")
+    def save_requirements(self, requirements, version):
+        file_path = os.path.join(self.output_dir, f"requirements_{version}.txt")
         with open(file_path, "w") as file:
             for req in requirements:
                 file.write(f"{req}\n")
         return file_path
 
-    def get_versions(self):
-        versions = []
-        for file in os.listdir(self.output_dir):
-            if file.startswith("generated_script_") and file.endswith(".py"):
-                version = int(file.split("_")[2].split(".")[0])
-                versions.append(version)
-        return sorted(versions)
-
-    def get_current_version(self):
-        return self.version
+    def get_versions_dict(self):
+        return self.versions_dict
 
     def get_code(self, version):
         file_path = os.path.join(self.output_dir, f"generated_script_{version}.py")
