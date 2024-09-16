@@ -36,10 +36,12 @@ CodeAIde is an AI-powered coding assistant that helps developers write, test, an
    ```
 
 4. Set up your Anthropic API key:
+   - Set up a developer account with Anthropic and get an API key at https://console.anthropic.com/dashboard
+   - You'll need to pre-fund your account to cover API costs. Current costs (as of Sept 15, 2024) are $0.003 and $0.015 per 1000 tokens for input and output, respectively. Long conversations will obviously cost more. Fund your account with something small (maybe $5) to start with, then add more if you find this tool useful.
    - Create a `.env` file in the project root
    - Add your API key to the file:
      ```
-     ANTHROPIC_API_KEY=your_api_key_here
+     ANTHROPIC_API_KEY="your_api_key_here"  # make sure the key is in quotes
      ```
 
 ## Usage
@@ -49,12 +51,18 @@ To test the API connection, run:
 ```
 python codeaide.py test
 ```
+This will send a simple "Hi Claude, are we communicating?" prompt to the API. If your API key is set up properly and you have an internet connection, you'll see a response at the command line that looks something like this:
+```
+Connection successful!
+Claude says: Yes, we are communicating! I'm Claude, an AI assistant. How can I help you today?
+```
 
-To start CodeAIde, run:
+To start CodeAIde for actual code generation, run:
 
 ```
 python codeaide.py
 ```
+This will bring up a chat window where you can start your conversation.
 
 Follow the prompts to interact with the AI assistant. You can:
 - Enter coding tasks or questions
