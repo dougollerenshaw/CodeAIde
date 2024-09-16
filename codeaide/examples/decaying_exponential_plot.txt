@@ -1,0 +1,1 @@
+Could you provide a plot of an exponentially decaying sine wave where time varies from 0 to 10 seconds? The period of the sine wave should be 0.5 seconds. The exponential should decay to approximately 20% of its peak by 10 seconds. Please make the line black.

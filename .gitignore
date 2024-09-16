@@ -1,0 +1,20 @@
+# Exclude generated code folder
+generated_code/
+
+# Python-related files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment and IDE files
+.env
+.vscode/
+.idea/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Dependency directories
+venv/
+env/
