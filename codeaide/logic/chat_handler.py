@@ -1,7 +1,9 @@
 from codeaide.utils.api_utils import send_api_request, parse_response
-from codeaide.logic.code_runner import run_code
-from codeaide.utils.constants import MAX_TOKENS, MAX_RETRIES
-from codeaide.utils.file_handler import FileHandler  # Add this import
+from codeaide.utils.environment_manager import EnvironmentManager
+from codeaide.utils.terminal_manager import TerminalManager
+from codeaide.utils.file_handler import FileHandler
+from codeaide.utils.constants import MAX_TOKENS
+import os
 
 class ChatHandler:
     def __init__(self, cost_tracker):
@@ -9,6 +11,8 @@ class ChatHandler:
         self.conversation_history = []
         self.file_handler = FileHandler()
         self.file_handler.clear_output_dir()
+        self.env_manager = EnvironmentManager()
+        self.terminal_manager = TerminalManager()
 
     def process_input(self, user_input):
         self.conversation_history.append({"role": "user", "content": user_input})
@@ -40,7 +44,34 @@ class ChatHandler:
         return {'type': 'message', 'message': text}
 
     def run_generated_code(self, filename, requirements):
-        run_code(filename, requirements)
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        script_path = os.path.join(project_root, self.file_handler.output_dir, filename)
+        req_path = os.path.join(project_root, self.file_handler.output_dir, requirements)
+
+        activation_command = self.env_manager.get_activation_command()
+        
+        new_packages = self.env_manager.install_requirements(req_path)
+
+        script_content = f"""
+        clear # Clear the terminal
+        echo "Activating environment..."
+        {activation_command}
+        
+        """
+
+        if new_packages:
+            script_content += 'echo "New dependencies installed:"\n'
+            for package in new_packages:
+                script_content += f'echo "  - {package}"\n'
+        
+        script_content += f"""
+        echo "Running {filename}..."
+        python "{script_path}"
+        
+        echo "Script execution completed."
+        """
+
+        self.terminal_manager.run_in_terminal(script_content)
 
     def is_task_in_progress(self):
         return bool(self.conversation_history)
