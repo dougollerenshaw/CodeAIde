@@ -1,23 +1,24 @@
 import subprocess
 import os
+import sys
+import venv
 
 class EnvironmentManager:
-    def __init__(self, env_name="codeaide_run"):
+    def __init__(self, env_name="codeaide_env"):
         self.env_name = env_name
+        self.env_path = os.path.join(os.path.expanduser("~"), ".codeaide_envs", self.env_name)
         self.installed_packages = set()
         self._setup_environment()
         self._get_installed_packages()
 
     def _setup_environment(self):
-        try:
-            subprocess.run(["conda", "create", "-n", self.env_name, "python=3.8", "-y"], check=True)
-        except subprocess.CalledProcessError:
-            # Environment might already exist, which is fine
-            pass
+        if not os.path.exists(self.env_path):
+            venv.create(self.env_path, with_pip=True)
 
     def _get_installed_packages(self):
+        pip_path = os.path.join(self.env_path, "bin", "pip") if os.name != 'nt' else os.path.join(self.env_path, "Scripts", "pip.exe")
         result = subprocess.run(
-            f"conda run -n {self.env_name} pip freeze",
+            f"{pip_path} freeze",
             shell=True, check=True, capture_output=True, text=True
         )
         self.installed_packages = {
@@ -25,6 +26,7 @@ class EnvironmentManager:
         }
 
     def install_requirements(self, requirements_file):
+        pip_path = os.path.join(self.env_path, "bin", "pip") if os.name != 'nt' else os.path.join(self.env_path, "Scripts", "pip.exe")
         with open(requirements_file, 'r') as f:
             required_packages = {line.strip().lower() for line in f if line.strip()}
 
@@ -34,18 +36,18 @@ class EnvironmentManager:
             packages_str = ' '.join(packages_to_install)
             try:
                 subprocess.run(
-                    f"conda run -n {self.env_name} pip install {packages_str}",
+                    f"{pip_path} install {packages_str}",
                     shell=True, check=True
                 )
                 self.installed_packages.update(packages_to_install)
-                return list(packages_to_install)  # Return list of newly installed packages
+                return list(packages_to_install)
             except subprocess.CalledProcessError as e:
                 print(f"Error installing requirements: {e}")
                 return []
-        return []  # Return empty list if no new packages were installed
+        return []
 
     def get_activation_command(self):
         if os.name == 'nt':  # Windows
-            return f"call activate {self.env_name}"
+            return f"call {os.path.join(self.env_path, 'Scripts', 'activate.bat')}"
         else:  # Unix-like
-            return f"source $(conda info --base)/etc/profile.d/conda.sh && conda activate {self.env_name}"
+            return f"source {os.path.join(self.env_path, 'bin', 'activate')}"

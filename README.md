@@ -70,21 +70,25 @@ Follow the prompts to interact with the AI assistant. You can:
 - Execute code locally
 - Check API usage and costs (not yet implemented)
 
+## Future feature roadmap
+
+The following features do not currently exist, but adding them in the future would make this project more useful:
+
+* Support for more code languages. Currently only Python is supported. Additional language support would require backend support for automatically compiling/running generated code in that language.
+* Additional LLM APIs. Currently only Anthropic's API and the Claude Sonnet 3.5 model is supported. Supporting additional models from Anthropic (including smaller models with lower API costs) and/or including support for different organizations (e.g. OpenAI) might be useful.
+* Chat history support. Currently, when a session ends, the chat history is lost. Ideally it would be possible to keep the chat history and associated code and make it searchable across sessions.
+
 ## Contributing
 
 Contributions to CodeAIde are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the license file for details.
 
 ## Disclaimer
 
-CodeAIde is an experimental tool and should be used with caution. Always review and test generated code before using it in production environments. And since code is executed locally, be careful what you ask for! For example, if you ask for a program that will wipe the entire contents of your harddrive, you might well get exactly what you asked for.
-
-## Acknowledgments
-
-- This project uses the Anthropic API to interact with the Claude AI model.
+CodeAIde is an experimental tool and should be used with caution. Always review and test generated code before using it in production environments. And since code is executed locally, be careful what you ask for! For example, if you ask for a program that will wipe the entire contents of your hard drive, you might well get exactly what you asked for.
 
 ## Contact
 
