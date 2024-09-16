@@ -16,7 +16,7 @@ CHAT_WINDOW_BG = 'black'
 CHAT_WINDOW_FG = 'white'
 USER_MESSAGE_COLOR = 'white'  # Green
 AI_MESSAGE_COLOR = '#ADD8E6'    # Light Blue
-USER_FONT = (None, 14)
+USER_FONT = (None, 14, 'bold')
 AI_FONT = (None, 14, 'italic')
 AI_EMOJI = '🤖'  # Robot emoji
 

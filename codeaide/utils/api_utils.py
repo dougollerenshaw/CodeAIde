@@ -13,6 +13,7 @@ def send_api_request(conversation_history, max_tokens=MAX_TOKENS):
     system_prompt = """
     You are an AI assistant specialized in providing coding advice and solutions. Your primary goal is to offer practical, working code examples while balancing the need for clarification with the ability to make reasonable assumptions. Follow these guidelines:
     * Prioritize providing functional code: When asked for code solutions, aim to deliver complete, runnable Python code whenever possible.
+    * Always return complete, fully functional code. Never use ellipses (...) or comments like "other methods remain unchanged" to indicate omitted parts. Every method, function, and class must be fully implemented in each response.    
     * Ensure that all necessary imports are included: If the code requires specific libraries or modules, include the necessary import statements.
     * If the code uses matplotlib, please make the code object oriented (e.g. using `fig, ax = plt.subplots()`, `ax.set_title(...)`, etc.).
     * Make reasonable assumptions: If certain details are missing from the user's query, make logical assumptions based on common practices and standards.
@@ -28,16 +29,24 @@ def send_api_request(conversation_history, max_tokens=MAX_TOKENS):
     * Make sure that the JSON object that you return is properly formatted so that it can be parsed correctly without errors. We want to avoid errors like "Error parsing JSON: Invalid control character at: line 4 column 446 (char 447)".
     * If a user asks you to generate code that performs some action, don't tell them you can't do it. Instead, provide the best code you can to accomplish the task they are requesting based on the information provided. They can run the code and see the results for themselves.
     * Try to maintain as much consistency as possible across responses. If a user asks you to make changes to a code snippet you've provided, try to make only the requested changes without altering the rest of the code.
+    * When modifying existing code, include the entire updated codebase in your response, not just the changed parts. Ensure all previously implemented features and methods are preserved unless explicitly asked to remove them.
+    * If providing a complete rewrite or entirely new implementation, increment the major version number (e.g., from 1.x to 2.0). For minor changes or additions, increment the minor version number (e.g., from 1.1 to 1.2).
+    * Ensure all explanations are complete: If you mention that you will provide a list, explanation, or breakdown of changes, always include the full content in your response. Never leave explanations incomplete or implied.
+    * Double-check your responses: Before finalizing your answer, review your 'text' field to ensure all promised explanations, lists, or breakdowns are fully included.
+    * For longer explanations or lists, use appropriate formatting within the 'text' field. Use newline characters (\n) and proper indentation to structure your response clearly within the JSON format.
 
     Remember, the goal is to provide valuable, working code solutions while maintaining a balance between making reasonable assumptions and seeking clarification when truly necessary.
-    Format your responses as a JSON object with four keys: 
-    * 'text': a string that contains any natural language explanations or comments that you think are helpful for the user. This should never be null. If you have no text response, provide a brief explanation of the code or the assumptions made.
+    Format your responses as a JSON object with six keys: 
+    * 'text': a string that contains any natural language explanations or comments that you think are helpful for the user. This should never be null or incomplete. If you mention providing a list or explanation, ensure it is fully included here. If you have no text response, provide a brief explanation of the code or the assumptions made.
     * 'questions': an array of strings that pose necessary follow-up questions to the user
-    * 'code': a string with properly the properly formatted code block. This should be null if you have questions or text responses but no code to provide.
+    * 'code': a string with the properly formatted, complete code block. This must include all necessary components for the code to run, including any previously implemented methods or classes. This should be null only if you have questions or text responses but no code to provide.    
+    * 'code_version': a string that represents the version of the code. Start at 1.0 and increment for each new version of the code you provide. Use your judgement on whether to increment the minor or major component of the version. It is critical that version numbers never be reused during a chat and that the numbers always increment upward. This field should be null if you have no code to provide.
+    * 'version_description': a very short string that describes the purpose of the code and/or changes made in this version of the code since the last version. This should be null if you have questions or text responses but no code to provide.
     * 'requirements': an array of strings listing any required Python packages or modules that are necessary to run the code. This should be null if no additional requirements are needed beyond the standard Python libraries.
     Do not include any text outside of the JSON object.
     """
     try:
+        print(f"\n\n{'='*50}\n")
         print(f"Sending API request. The max tokens is {max_tokens}. Here's the conversation history:")
         for message in conversation_history:
             print(f"{message['role']}: {message['content']}")
@@ -51,7 +60,6 @@ def send_api_request(conversation_history, max_tokens=MAX_TOKENS):
         )
         
         content = response.content[0].text if response.content else ""
-        print(f"API Response: {content}")
         
         if not content:
             print("Warning: Received empty response from API")
@@ -94,32 +102,30 @@ def parse_response(response):
         return None, None, None, None
     
     content = response.content[0].text
+    
     try:
-        # First, try to parse the JSON as-is
-        try:
-            parsed = json.loads(content)
-        except json.JSONDecodeError:
-            # If that fails, apply our newline handling
-            # Replace newlines in the entire content with \\n, except within the "code" field
-            content = re.sub(r'(?<!\\)\\n', r'\\n', content)
-            # Now replace literal \n (newline char) with \\n in the "code" field
-            content = re.sub(r'("code": ")(.+?)(")', lambda m: m.group(1) + m.group(2).replace('\n', '\\n') + m.group(3), content, flags=re.DOTALL)
-            parsed = json.loads(content)
-        
-        # Ensure newlines in the code field are properly unescaped for display
-        if 'code' in parsed and parsed['code'] is not None and parsed['code'] != "null":
-            parsed['code'] = parsed['code'].replace('\\n', '\n')
-        
-        return (
-            parsed.get('text', ''),
-            parsed.get('questions', []),
-            parsed.get('code'),
-            parsed.get('requirements', [])
-        )
-    except json.JSONDecodeError as e:
-        print(f"Error parsing JSON: {e}")
-        print(f"Raw content: {content}")
-        return None, None, None, None
+        parsed = json.loads(content)
+    except json.JSONDecodeError:
+        # If that fails, apply our newline handling
+        # Replace newlines in the entire content with \\n, except within the "code" field
+        content = re.sub(r'(?<!\\)\\n', r'\\n', content)
+        # Now replace literal \n (newline char) with \\n in the "code" field
+        content = re.sub(r'("code": ")(.+?)(")', lambda m: m.group(1) + m.group(2).replace('\n', '\\n') + m.group(3), content, flags=re.DOTALL)
+        parsed = json.loads(content)
+    
+    # Ensure newlines in the code field are properly unescaped for display
+    if 'code' in parsed and parsed['code'] is not None and parsed['code'] != "null":
+        parsed['code'] = parsed['code'].replace('\\n', '\n')
+    
+    return (
+        parsed.get('text', ''),
+        parsed.get('questions', []),
+        parsed.get('code'),
+        parsed.get('code_version'),
+        parsed.get('version_description'),
+        parsed.get('requirements', [])
+    )
+    
     
 def handle_truncation(current_max_tokens):
     truncation_message = (
