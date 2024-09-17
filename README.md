@@ -9,6 +9,13 @@ CodeAIde is an AI-powered coding assistant that helps developers write, test, an
 - Local code execution and testing
 - Cost tracking for API usage (not yet implemented)
 
+## Examples
+
+Here are some example videos demonstrating use. Example prompts can be accessed by clicking "Use Example" and selecting from avaialable examples.
+
+First, a simple matplotlib plot with followup requests to modify aesthetics.
+https://github.com/user-attachments/assets/36a73618-d34c-41d3-a647-b27b1f7e4d63
+
 ## Installation
 
 ### Prerequisites
