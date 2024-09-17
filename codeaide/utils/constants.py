@@ -16,8 +16,8 @@ CHAT_WINDOW_BG = 'black'
 CHAT_WINDOW_FG = 'white'
 USER_MESSAGE_COLOR = 'white'  # Green
 AI_MESSAGE_COLOR = '#ADD8E6'    # Light Blue
-USER_FONT = ("Arial", 14, 'normal')
-AI_FONT = ("Consolas", 14, 'normal')
+USER_FONT = ("Arial", 16, 'normal')
+AI_FONT = ("Consolas", 16, 'normal')
 AI_EMOJI = '🤖'  # Robot emoji
 
 # Code popup styling
@@ -25,7 +25,7 @@ CODE_WINDOW_WIDTH = 800
 CODE_WINDOW_HEIGHT = 800
 CODE_WINDOW_BG = 'black'
 CODE_WINDOW_FG = 'white'
-CODE_FONT = ("Courier", 12, 'normal')
+CODE_FONT = ("Courier", 14, 'normal')
 
 # File paths
 

@@ -9,7 +9,7 @@ import os
 class CodePopup(QWidget):
     def __init__(self, parent, file_handler, code, requirements, run_callback):
         super().__init__(parent, Qt.Window)
-        self.setWindowTitle("Generated Code")
+        self.setWindowTitle("💻 Generated Code 💻")
         self.resize(CODE_WINDOW_WIDTH, CODE_WINDOW_HEIGHT)
         self.file_handler = file_handler
         self.run_callback = run_callback

@@ -2,7 +2,7 @@ import sys
 import signal
 from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QMessageBox, QSpacerItem, QSizePolicy, QApplication
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QFont
 from codeaide.ui.code_popup import CodePopup
 from codeaide.utils import general_utils
 from codeaide.utils.constants import (
@@ -13,7 +13,7 @@ from codeaide.utils.constants import (
 class ChatWindow(QMainWindow):
     def __init__(self, chat_handler):
         super().__init__()
-        self.setWindowTitle("CodeAIde")
+        self.setWindowTitle("🤖 CodeAIde 🤖")
         self.setGeometry(0, 0, CHAT_WINDOW_WIDTH, CHAT_WINDOW_HEIGHT)
         self.chat_handler = chat_handler
         self.cost_tracker = chat_handler.cost_tracker
@@ -107,16 +107,11 @@ class ChatWindow(QMainWindow):
     def add_to_chat(self, sender, message):
         print(f"ChatWindow: Adding to chat - {sender}: {message}")
         color = USER_MESSAGE_COLOR if sender == "User" else AI_MESSAGE_COLOR
-        qfont = general_utils.set_font(USER_FONT if sender == "User" else AI_FONT)
-        self.chat_display.setCurrentFont(qfont)
+        font = USER_FONT if sender == "User" else AI_FONT
         sender = AI_EMOJI if sender == "AI" else sender
         
-        # Replace newlines with HTML line breaks
-        formatted_message = message.replace('\n', '<br>')
-        
-        html_message = f'<span style="color:{color};"><b>{sender}:</b> {formatted_message}</span><br>'
-        
-        self.chat_display.append(html_message)
+        html_message = general_utils.format_chat_message(sender, message, font, color)
+        self.chat_display.append(html_message + "<br>")
         self.chat_display.ensureCursorVisible()
 
     def display_thinking(self):
@@ -140,7 +135,7 @@ class ChatWindow(QMainWindow):
             if self.chat_handler.is_task_in_progress():
                 self.add_to_chat("AI", "Please provide answers to these questions to continue.")
         elif response['type'] == 'code':
-            self.add_to_chat("AI", response['message'] + " Opening or updating code in the code window...")
+            self.add_to_chat("AI", response['message'])
             print("About to update or create code popup")
             self.update_or_create_code_popup(response)
             print("Code popup updated or created")

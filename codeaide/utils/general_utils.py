@@ -41,3 +41,19 @@ def set_font(font_tuple):
     # "normal" is the default, so we don't need to do anything for it
     
     return qfont
+
+def format_chat_message(sender, message, font, color):
+    qfont = set_font(font)
+    font_family = qfont.family()
+    font_size = qfont.pointSize()
+    font_style = "italic" if qfont.style() == QFont.StyleItalic else "normal"
+    
+    formatted_message = message.replace('\n', '<br>')
+    
+    html_message = f'''
+    <span style="color:{color}; font-family:'{font_family}'; font-size:{font_size}pt; font-style:{font_style};">
+    <b>{sender}:</b> {formatted_message}
+    </span>
+    '''
+    
+    return html_message
