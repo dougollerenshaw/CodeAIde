@@ -15,7 +15,7 @@ Here are some example videos demonstrating use. Example prompts can be accessed 
 
 First, a simple matplotlib plot with followup requests to modify aesthetics.  
 
-![Embedded Video](https://github.com/user-attachments/assets/3819d9a7-28b2-4df3-8ca9-a401f2b4ec08.mp4)
+![Embedded Video](https://youtu.be/tDAGjbs8tU8)
 
 
 ## Installation
