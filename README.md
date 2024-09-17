@@ -14,15 +14,13 @@ CodeAIde is an AI-powered coding assistant that helps developers write, test, an
 Here are some example videos demonstrating use. Example prompts can be accessed by clicking "Use Example" and selecting from avaialable examples.
 
 First, a simple matplotlib plot with followup requests to modify aesthetics.
-
-![Matplotlib Plotting Example](./assets/matplotlib_plotting_example.mp4)
+EMBED VIDEO HERE
 
 ## Installation
 
 ### Prerequisites
 
 - Python 3.8 or higher
-- Conda (for environment management)
 
 ### Setup
 
