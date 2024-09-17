@@ -43,48 +43,39 @@ def parse_response(response):
 
     content = response.content[0].text
 
-    def preprocess_json(content):
-        # Use a regex to find the "code" field and preserve its formatting
-        code_match = re.search(r'"code"\s*:\s*"((?:\\.|[^"\\])*)"', content)
-        if code_match:
-            code = code_match.group(1)
-            # Replace the code field with a placeholder
-            content = content.replace(code_match.group(0), '"code": "CODE_PLACEHOLDER"')
-        
-        # Preprocess the rest of the content
-        content = re.sub(r'\n(?=(?:[^"]*"[^"]*")*[^"]*$)', ' ', content)
-        content = re.sub(r'(?<!\\)(\n)(?=(?:[^"]*"[^"]*")*[^"]*$)', r'\\n', content)
-        content = re.sub(r'[\x00-\x1F\x7F-\x9F]', '', content)
-        
-        # Replace the placeholder with the original code
-        if code_match:
-            content = content.replace('"CODE_PLACEHOLDER"', json.dumps(code)[1:-1])
-        
-        return content
+    def extract_json_field(field_name, content, is_code=False):
+        pattern = rf'"{field_name}"\s*:\s*"((?:\\.|[^"\\])*)"'
+        match = re.search(pattern, content, re.DOTALL)
+        if match:
+            field_content = match.group(1)
+            if is_code:
+                # For code, replace escaped newlines with actual newlines, but only within strings
+                field_content = re.sub(r'(?<!\\)\\n', '\n', field_content)
+                field_content = re.sub(r'\\(?=["\'])', '', field_content)
+            else:
+                # For non-code fields, unescape all content
+                field_content = field_content.encode().decode('unicode_escape')
+            return field_content
+        return None
 
-    # Preprocess the content
-    preprocessed_content = preprocess_json(content)
+    def extract_json_array(field_name, content):
+        pattern = rf'"{field_name}"\s*:\s*(\[[^\]]*\])'
+        match = re.search(pattern, content)
+        if match:
+            return json.loads(match.group(1))
+        return []
 
-    try:
-        parsed = json.loads(preprocessed_content)
-    except json.JSONDecodeError:
-        # If preprocessing didn't help, try to parse the original content
-        # This will raise a JSONDecodeError if it fails
-        parsed = json.loads(content)
+    text = extract_json_field('text', content)
+    code = extract_json_field('code', content, is_code=True)
+    code_version = extract_json_field('code_version', content)
+    version_description = extract_json_field('version_description', content)
+    requirements = extract_json_array('requirements', content)
 
-    # Unescape the code field without changing its formatting
-    if 'code' in parsed and parsed['code'] is not None and parsed['code'] != "null":
-        parsed['code'] = parsed['code'].encode().decode('unicode_escape')
+    questions_match = re.search(r'"questions"\s*:\s*(\[(?:\s*"(?:\\.|[^"\\])*"\s*,?\s*)*\])', content)
+    questions = json.loads(questions_match.group(1)) if questions_match else []
 
-    return (
-        parsed.get('text', ''),
-        parsed.get('questions', []),
-        parsed.get('code'),
-        parsed.get('code_version'),
-        parsed.get('version_description'),
-        parsed.get('requirements', [])
-    )
-    
+    return text, questions, code, code_version, version_description, requirements
+
 def test_api_connection():
     try:
         response = client.messages.create(

@@ -1,3 +1,4 @@
 anthropic==0.34.2
 python-decouple==3.8
 virtualenv==20.16.2
+pyyaml

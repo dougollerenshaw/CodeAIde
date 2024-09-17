@@ -1,0 +1,112 @@
+examples:
+  - description: Exponentially decaying sine wave plot
+    prompt: |
+      Could you provide a plot of an exponentially decaying sine wave with the following specifications:
+      • Time range: 0 to 10 seconds
+      • Sine wave frequency: 2 Hz
+      • Decay rate: Approximately 20% of peak amplitude by 10 seconds
+      • Line color: Black
+
+  - description: Create a Simple Snake Game using Pygame
+    prompt: |
+      Create a Python script that implements a basic Snake game using Pygame. The game should have the following features:
+
+      1. A snake that moves around the screen, controlled by arrow keys.
+      2. Food items that appear randomly on the screen.
+      3. The snake grows longer when it eats food.
+      4. The game ends if the snake hits the screen edges or itself.
+      5. Display the current score (number of food items eaten).
+      6. A simple "Game Over" screen that shows the final score and allows restarting the game.
+
+      Requirements:
+      - Use Pygame for graphics and event handling.
+      - The game window should be 640x480 pixels.
+      - The snake and food should be represented by colored rectangles.
+      - The snake should move at a constant speed.
+      - Use a clock to control the game's frame rate.
+      - Include comments explaining key parts of the code.
+      - Handle keyboard events for moving the snake and restarting the game.
+
+      Please provide the complete Python code to implement this Snake game, including necessary imports and comments explaining each major step.
+
+  - description: Pong game implementation using Pygame
+    prompt: |
+      Create a Python implementation of the classic Pong game. The game should have the following features:
+
+      Detailed requirements:
+      • Implement a single-player mode where the player controls one paddle
+      • Create a computer controlled opponent for the other paddle
+      • Display and update the score for both player and computer
+      • End the game when either the player or computer reaches 10 points
+      • Include basic sound effects for ball hits and scoring
+
+      Additional considerations:
+       - Ensure smooth paddle and ball movement
+       - Implement gradually increasing difficulty (e.g., faster ball speed as the game progresses)
+       - Add a simple menu system for starting a new game and quitting
+
+      Remember to comment your code and use object-oriented programming principles where appropriate.
+
+  - description: Simple MNIST Classifier with PyTorch
+    prompt: |
+      Create a basic neural network classifier for the MNIST dataset using PyTorch. The implementation should include the following steps:
+
+      1. Import necessary libraries (torch, torchvision)
+      2. Load and preprocess the MNIST dataset
+      3. Define a simple neural network architecture
+      4. Set up the training loop
+      5. Train the model
+      6. Evaluate the model's performance
+      7. Generate a visualization showing some correct and incorrect predictions
+
+      Specific requirements:
+      • Use a feedforward neural network with two hidden layers
+      • Use ReLU activation for hidden layers and softmax for the output layer
+      • Use CrossEntropyLoss as the loss function
+      • Use Stochastic Gradient Descent (SGD) as the optimizer
+      • Train for 5 epochs
+      • Print the training loss after each epoch
+      • Evaluate and print the accuracy on the test set after training
+      • The visualization should include a grid of images with their predicted and true labels. Show 10 examples of correct predictions and 10 examples of incorrect predictions.
+      • Make sure the visualization is compact enough to be displayed on a standard laptop screen
+
+      Please provide the complete Python code to implement this MNIST classifier, including comments explaining each major step.
+
+  - description: CSV Generation and Clustering Analysis/Visualization
+    prompt: |
+      Create a Python script that does the following:
+
+      1. Generate a CSV file with synthetic data for customer segmentation. Include the following columns where data in each column should be randomly generated from 3 different distributions to represent 3 clusters:
+        - Customer ID
+        - Age
+        - Annual Income
+        - Spending Score (1-100)
+      2. Save the CSV file to disk.
+      3. Read the CSV file back into a pandas DataFrame.
+      4. Perform k-means clustering on the data using Age, Annual Income, and Spending Score.
+      5. Visualize the results using a 2D scatter plot with:
+        - Axes representing Annual Income and Spending Score.
+        - Dot size proportional to the Age of the customer.
+        - Color designating the cluster they belong to.
+      6. Print basic statistics for each cluster (mean age, income, and spending score).
+
+      Please provide the complete Python code, including necessary imports and comments explaining each major step.
+
+  - description: Function generation and testing
+    prompt: |
+      Create a Python function that checks the strength of a password, along with a unit test for this function. The requirements are as follows:
+
+      1. Implement a function called `check_password_strength(password: str) -> str` that:
+        - Returns "Strong" if the password is at least 8 characters long and contains at least one uppercase letter, one lowercase letter, one digit, and one special character.
+        - Returns "Moderate" if the password is at least 8 characters long and meets any three of the above criteria.
+        - Returns "Weak" for all other cases.
+
+      2. Write a unit test for the `check_password_strength` function. The test should cover at least the following cases:
+        - A strong password
+        - A moderate password
+        - A weak password
+        - An empty string
+
+      Please provide the complete Python code for both the `check_password_strength` function and its associated unit test, including necessary imports and comments explaining the implementation and test cases.
+      Please provide a good docstring for the function explaining its purpose and expected input/output.
+      For simplicity, please put the function and test in the same file.
