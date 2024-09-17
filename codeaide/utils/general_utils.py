@@ -1,27 +1,36 @@
 import os
-import random
+import yaml
 from PyQt5.QtGui import QFont
+    
+# Store the path of the general_utils.py file
+UTILS_DIR = os.path.dirname(os.path.abspath(__file__))
 
-EXAMPLES_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'examples')
+def get_project_root():
+    """Get the project root directory."""
+    # Always use UTILS_DIR as the starting point
+    return os.path.abspath(os.path.join(UTILS_DIR, '..', '..'))
 
-def get_example_prompts():
-    """Return a list of available example prompt names."""
-    return [f.replace('.txt', '') for f in os.listdir(EXAMPLES_DIR) if f.endswith('.txt')]
+def get_examples_file_path():
+    """Get the path to the examples.yaml file."""
+    return os.path.join(get_project_root(), 'codeaide', 'examples.yaml')
 
-def load_example_prompt(name):
-    """Load and return the content of a specific example prompt."""
-    file_path = os.path.join(EXAMPLES_DIR, f"{name}.txt")
-    if not os.path.exists(file_path):
-        return None
-    with open(file_path, 'r') as file:
-        return file.read()
-
-def get_random_example():
-    """Return a random example prompt."""
-    examples = get_example_prompts()
-    if not examples:
-        return None
-    return load_example_prompt(random.choice(examples))
+def load_examples():
+    """Load and return all examples from the YAML file."""
+    examples_file = get_examples_file_path()
+    if not os.path.exists(examples_file):
+        print(f"Examples file not found: {examples_file}")
+        return []
+    
+    try:
+        with open(examples_file, 'r', encoding='utf-8') as file:
+            data = yaml.safe_load(file)
+        return data.get('examples', [])
+    except yaml.YAMLError as e:
+        print(f"YAML Error: {str(e)}")
+        return []
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
+        return []
 
 def set_font(font_tuple):
     if len(font_tuple) == 2:

@@ -1,1 +1,0 @@
-Create a Python implementation of the classic Pong game using Pygame. The game should be single-player, with the computer controlling one paddle. Include a way to keep score and end the game when a player reaches 10 points.

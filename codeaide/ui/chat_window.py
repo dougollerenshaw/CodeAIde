@@ -4,10 +4,11 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTex
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QColor, QFont
 from codeaide.ui.code_popup import CodePopup
+from codeaide.ui.example_selection_dialog import show_example_dialog
 from codeaide.utils import general_utils
 from codeaide.utils.constants import (
     CHAT_WINDOW_WIDTH, CHAT_WINDOW_HEIGHT, CHAT_WINDOW_BG, CHAT_WINDOW_FG,
-    USER_MESSAGE_COLOR, AI_MESSAGE_COLOR, USER_FONT, AI_FONT, AI_EMOJI
+    USER_MESSAGE_COLOR, AI_MESSAGE_COLOR, USER_FONT, AI_FONT, AI_EMOJI, INITIAL_MESSAGE
 )
 
 class ChatWindow(QMainWindow):
@@ -19,7 +20,7 @@ class ChatWindow(QMainWindow):
         self.cost_tracker = chat_handler.cost_tracker
         self.code_popup = None
         self.setup_ui()
-        self.add_to_chat("AI", "I'm a code writing assistant. I can generate and run code for you. What would you like to do?")
+        self.add_to_chat("AI", INITIAL_MESSAGE)
         
         # Set up SIGINT handler
         signal.signal(signal.SIGINT, self.sigint_handler)
@@ -171,12 +172,13 @@ class ChatWindow(QMainWindow):
             self.code_popup.show() 
 
     def load_example(self):
-        example = general_utils.load_example_prompt('decaying_exponential_plot')
+        example = show_example_dialog(self)
         if example:
             self.input_text.setPlainText(example)
             self.input_text.moveCursor(self.input_text.textCursor().End)
         else:
-            QMessageBox.information(self, "No Examples", "No example prompts are available.")
+            QMessageBox.information(self, "No Selection", "No example was selected.")
+
 
     def on_exit(self):
         reply = QMessageBox.question(self, 'Quit', 'Do you want to quit?', 
