@@ -14,7 +14,12 @@ CodeAIde is an AI-powered coding assistant that helps developers write, test, an
 Here are some example videos demonstrating use. Example prompts can be accessed by clicking "Use Example" and selecting from avaialable examples.
 
 First, a simple matplotlib plot with followup requests to modify aesthetics.
-https://github.com/user-attachments/assets/36a73618-d34c-41d3-a647-b27b1f7e4d63
+
+<video width="640" height="360" controls>
+  <source src="https://github.com/user-attachments/assets/3ed5565c-ff41-4bdf-81a8-8a9bb2e3b267" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
 
 ## Installation
 
