@@ -2,11 +2,12 @@ import tkinter as tk
 from tkinter import ttk
 
 class InputArea(ttk.Frame):
-    def __init__(self, parent, submit_callback, bg='white', fg='black'):
+    def __init__(self, parent, submit_callback, bg='white', fg='black', font=None):
         super().__init__(parent)
         self.submit_callback = submit_callback
         self.bg = bg
         self.fg = fg
+        self.font = font
         self.setup_ui()
 
     def setup_ui(self):
@@ -15,10 +16,10 @@ class InputArea(ttk.Frame):
         self.input_text = tk.Text(
             self, 
             wrap=tk.WORD, 
-            width=70, 
             height=5,
             bg=self.bg,
             fg=self.fg,
+            font=self.font,
             insertbackground=self.fg
         )
         self.input_text.grid(row=0, column=0, sticky=(tk.W, tk.E))
@@ -33,7 +34,9 @@ class InputArea(ttk.Frame):
         self.input_text.bind('<<Modified>>', self.on_modify)
 
     def on_return(self, event):
-        self.submit_callback()
+        user_input = self.get_input()
+        self.clear_input()
+        self.submit_callback(user_input)
         return 'break'
 
     def on_shift_return(self, event):
