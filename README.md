@@ -15,11 +15,7 @@ Here are some example videos demonstrating use. Example prompts can be accessed 
 
 First, a simple matplotlib plot with followup requests to modify aesthetics.
 
-<video width="640" height="360" controls>
-  <source src="https://github.com/user-attachments/assets/3ed5565c-ff41-4bdf-81a8-8a9bb2e3b267" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
-
+![Matplotlib Plotting Example](./assets/matplotlib_plotting_example.mp4)
 
 ## Installation
 
