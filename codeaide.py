@@ -1,4 +1,5 @@
 import sys
+from PyQt5.QtWidgets import QApplication
 from codeaide.logic.chat_handler import ChatHandler
 from codeaide.ui.chat_window import ChatWindow
 
@@ -14,8 +15,10 @@ def main():
             print("Connection failed.")
             print("Error:", message)
     else:
-        app = ChatWindow(chat_handler)
-        app.run()
+        app = QApplication(sys.argv)
+        chat_window = ChatWindow(chat_handler)
+        chat_window.show()
+        sys.exit(app.exec_())
 
 if __name__ == "__main__":
     main()

@@ -49,7 +49,7 @@ class ChatHandler:
                         return {'type': 'questions', 'message': text, 'questions': questions}
                     elif code:
                         self.file_handler.save_code(code, code_version, version_description, requirements)
-                        return {'type': 'code', 'message': f"{text} (Version {code_version})", 'code': code, 'requirements': requirements}
+                        return {'type': 'code', 'message': f"{text}\n\nOpening in the code window as v{code_version}...", 'code': code, 'requirements': requirements}
                     else:
                         return {'type': 'message', 'message': text}
                 
