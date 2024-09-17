@@ -25,7 +25,7 @@ class ChatHandler:
                 version_info = f"\n\nThe latest code version was {self.latest_version}. If you're making minor changes to the previous code, increment the minor version (e.g., 1.0 to 1.1). If you're creating entirely new code, increment the major version (e.g., 1.1 to 2.0). Ensure the new version is higher than {self.latest_version}."
                 self.conversation_history[-1]["content"] += version_info
 
-                response, is_truncated = send_api_request(self.conversation_history, MAX_TOKENS)
+                response = send_api_request(self.conversation_history, MAX_TOKENS)
                 print(f"Response (Attempt {attempt + 1}): {response}")
                 
                 if response is None:

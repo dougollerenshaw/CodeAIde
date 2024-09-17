@@ -17,6 +17,7 @@ class CodePopup(QWidget):
         self.load_versions()
         self.show_code(code, requirements)
         self.position_window()
+        self.loading_versions = False # Prevents multiple calls to on_version_change method
         self.show()
 
     def setup_ui(self):
@@ -70,6 +71,7 @@ class CodePopup(QWidget):
         self.show_code(code, requirements)
 
     def load_versions(self):
+        self.loading_versions = True  # Set flag before loading to prevent on_version_change from running
         self.versions_dict = self.file_handler.get_versions_dict()
         version_values = [f"v{version}: {data['version_description']}" 
                           for version, data in self.versions_dict.items()]
@@ -77,13 +79,17 @@ class CodePopup(QWidget):
         self.version_dropdown.addItems(version_values)
         if version_values:
             self.version_dropdown.setCurrentIndex(len(version_values) - 1)
+        self.loading_versions = False  # Reset flag after loading to allow on_version_change to run
 
     def show_code(self, code, requirements):
         self.text_area.setPlainText(code)
         self.current_requirements = requirements
         self.bring_to_front()
 
-    def on_version_change(self, index):
+    def on_version_change(self):
+        if self.loading_versions:
+            return  # Exit early if we're still loading versions
+        
         selected = self.version_dropdown.currentText()
         version = selected.split(':')[0].strip('v')
         version_data = self.versions_dict[version]
