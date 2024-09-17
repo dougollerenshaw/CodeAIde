@@ -29,25 +29,7 @@ examples:
 
       Please provide the complete Python code to implement this Snake game, including necessary imports and comments explaining each major step.
 
-  - description: Pong game implementation using Pygame
-    prompt: |
-      Create a Python implementation of the classic Pong game. The game should have the following features:
-
-      Detailed requirements:
-      • Implement a single-player mode where the player controls one paddle
-      • Create a computer controlled opponent for the other paddle
-      • Display and update the score for both player and computer
-      • End the game when either the player or computer reaches 10 points
-      • Include basic sound effects for ball hits and scoring
-
-      Additional considerations:
-       - Ensure smooth paddle and ball movement
-       - Implement gradually increasing difficulty (e.g., faster ball speed as the game progresses)
-       - Add a simple menu system for starting a new game and quitting
-
-      Remember to comment your code and use object-oriented programming principles where appropriate.
-
-  - description: Simple MNIST Classifier with PyTorch
+  - description: Simple MNIST Image Classifier with PyTorch
     prompt: |
       Create a basic neural network classifier for the MNIST dataset using PyTorch. The implementation should include the following steps:
 

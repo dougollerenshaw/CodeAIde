@@ -7,7 +7,7 @@ class ExampleSelectionDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Select an Example")
-        self.setGeometry(100, 100, 500, 400)
+        self.setGeometry(100, 100, 600, 600)
         self.setModal(True)
         self.layout = QVBoxLayout()
 
@@ -23,9 +23,9 @@ class ExampleSelectionDialog(QDialog):
         self.splitter.addWidget(self.example_list)
         self.splitter.addWidget(self.preview_text)
         
-        # Set the ratio to 1:3 (25% list, 75% preview)
+        # Set the ratio to 1:3 (20% list, 80% preview)
         self.splitter.setStretchFactor(0, 1)
-        self.splitter.setStretchFactor(1, 3)
+        self.splitter.setStretchFactor(1, 4)
 
         self.layout.addWidget(self.splitter)
         self.select_button = QPushButton("Select")
