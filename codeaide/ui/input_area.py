@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, TclError
 
 class InputArea(ttk.Frame):
     def __init__(self, parent, submit_callback, bg='white', fg='black', font=None):
@@ -32,6 +32,24 @@ class InputArea(ttk.Frame):
         self.input_text.bind('<Return>', self.on_return)
         self.input_text.bind('<Shift-Return>', self.on_shift_return)
         self.input_text.bind('<<Modified>>', self.on_modify)
+        self.input_text.bind('<Control-v>', self.custom_paste)
+
+    def custom_paste(self, event=None):
+        try:
+            # Try to get clipboard contents as UTF8 string
+            clipboard_content = self.clipboard_get()
+        except TclError:
+            try:
+                # If UTF8 fails, try as a plain string
+                clipboard_content = self.clipboard_get(type='STRING')
+            except TclError:
+                # If both fail, inform the user
+                print("Unable to paste. Clipboard content is not text.")
+                return "break"
+        
+        # Insert the clipboard content
+        self.input_text.insert(tk.INSERT, clipboard_content)
+        return "break"  # Prevents the default paste behavior
 
     def on_return(self, event):
         user_input = self.get_input()

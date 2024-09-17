@@ -1,0 +1,29 @@
+Hi Flow team, I miss you all!
+I've been working on a little hobby project and trying to use Flow for text input in a PyQT or TKinter input widget. But it doesn't work! The text just won't paste.
+
+Here's a little sample script that will make a PyQT text input box:
+```
+import sys
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QTextEdit
+
+class SimpleInputTest(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        layout = QVBoxLayout()
+        self.textEdit = QTextEdit()
+        layout.addWidget(self.textEdit)
+        self.setLayout(layout)
+        self.setGeometry(300, 300, 350, 250)
+        self.setWindowTitle('Simple PyQt Input Test')
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    ex = SimpleInputTest()
+    ex.show()
+    sys.exit(app.exec_())
+```
+
+I can paste text into that box with ctrl-v, but I can't get Flow to paste there.
