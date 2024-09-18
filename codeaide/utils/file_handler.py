@@ -2,10 +2,17 @@ import os
 import shutil
 
 class FileHandler:
-    def __init__(self):
-        self.base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    def __init__(self, base_dir=None):
+        if base_dir is None:
+            self.base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        else:
+            self.base_dir = base_dir
         self.output_dir = os.path.join(self.base_dir, "generated_code")
         self.versions_dict = {}
+        self._ensure_output_dir_exists()
+
+    def _ensure_output_dir_exists(self):
+        os.makedirs(self.output_dir, exist_ok=True)
 
     def clear_output_dir(self):
         print(f"Clearing output directory: {self.output_dir}")

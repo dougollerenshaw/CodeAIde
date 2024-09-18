@@ -41,40 +41,20 @@ def parse_response(response):
     if not response or not response.content:
         return None, None, None, None, None, None
 
-    content = response.content[0].text
+    try:
+        content = json.loads(response.content[0].text)
+        
+        text = content.get('text')
+        code = content.get('code')
+        code_version = content.get('code_version')
+        version_description = content.get('version_description')
+        requirements = content.get('requirements', [])
+        questions = content.get('questions', [])
 
-    def extract_json_field(field_name, content, is_code=False):
-        pattern = rf'"{field_name}"\s*:\s*"((?:\\.|[^"\\])*)"'
-        match = re.search(pattern, content, re.DOTALL)
-        if match:
-            field_content = match.group(1)
-            if is_code:
-                # For code, replace escaped newlines with actual newlines, but only within strings
-                field_content = re.sub(r'(?<!\\)\\n', '\n', field_content)
-                field_content = re.sub(r'\\(?=["\'])', '', field_content)
-            else:
-                # For non-code fields, unescape all content
-                field_content = field_content.encode().decode('unicode_escape')
-            return field_content
-        return None
-
-    def extract_json_array(field_name, content):
-        pattern = rf'"{field_name}"\s*:\s*(\[[^\]]*\])'
-        match = re.search(pattern, content)
-        if match:
-            return json.loads(match.group(1))
-        return []
-
-    text = extract_json_field('text', content)
-    code = extract_json_field('code', content, is_code=True)
-    code_version = extract_json_field('code_version', content)
-    version_description = extract_json_field('version_description', content)
-    requirements = extract_json_array('requirements', content)
-
-    questions_match = re.search(r'"questions"\s*:\s*(\[(?:\s*"(?:\\.|[^"\\])*"\s*,?\s*)*\])', content)
-    questions = json.loads(questions_match.group(1)) if questions_match else []
-
-    return text, questions, code, code_version, version_description, requirements
+        return text, questions, code, code_version, version_description, requirements
+    except json.JSONDecodeError:
+        print("Error: Received malformed JSON from the API")
+        return None, None, None, None, None, None
 
 def test_api_connection():
     try:
