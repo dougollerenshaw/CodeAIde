@@ -9,12 +9,19 @@ CodeAIde is an AI-powered coding assistant that helps developers write, test, an
 - Local code execution and testing
 - Cost tracking for API usage (not yet implemented)
 
+## Examples
+
+Here are some example videos demonstrating use. Example prompts can be accessed by clicking "Use Example" and selecting from avaialable examples.
+
+First, a simple matplotlib plot with followup requests to modify aesthetics.  
+
+https://github.com/user-attachments/assets/8aa729ff-c431-4a61-a9ef-d17050a27d02
+
 ## Installation
 
 ### Prerequisites
 
 - Python 3.8 or higher
-- Conda (for environment management)
 
 ### Setup
 
@@ -66,9 +73,11 @@ This will bring up a chat window where you can start your conversation.
 
 Follow the prompts to interact with the AI assistant. You can:
 - Enter coding tasks or questions
-- Review and approve generated code
+- Read the generated code in a popup before running
 - Execute code locally
-- Check API usage and costs (not yet implemented)
+- Request changes or improvements from the LLM (the previous code will remain in the model's context window)
+- Copy the code to your clipboard or save it as a standalone file
+- Select and re-run any previous version of the code form the current conversation.
 
 ## Future feature roadmap
 
@@ -77,6 +86,8 @@ The following features do not currently exist, but adding them in the future wou
 * Support for more code languages. Currently only Python is supported. Additional language support would require backend support for automatically compiling/running generated code in that language.
 * Additional LLM APIs. Currently only Anthropic's API and the Claude Sonnet 3.5 model is supported. Supporting additional models from Anthropic (including smaller models with lower API costs) and/or including support for different organizations (e.g. OpenAI) might be useful.
 * Chat history support. Currently, when a session ends, the chat history is lost. Ideally it would be possible to keep the chat history and associated code and make it searchable across sessions.
+* API usage tracking. The API messages contain information with the number of prompt and response tokens. We can track these during a session to estimate the total cost of all API requests.
+* Automatic uploading of errors. Currently, if the code fails to run, you'll need to share the traceback in the chat to get a solution. Ideally code failures could be caught and automatically shared, prompting the LLM to provide a solution without the need to cut/paste anything.
 
 ## Contributing
 

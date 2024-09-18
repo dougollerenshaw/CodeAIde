@@ -1,6 +1,9 @@
 # Exclude generated code folder
 generated_code/
 
+# Exclude videos folder
+videos/
+
 # Python-related files
 __pycache__/
 *.py[cod]
