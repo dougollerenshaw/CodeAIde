@@ -5,9 +5,14 @@ from anthropic import APIError
 from decouple import config
 from codeaide.utils.constants import MAX_TOKENS, AI_MODEL, SYSTEM_PROMPT
 
-ANTHROPIC_API_KEY = config('ANTHROPIC_API_KEY')
+try:
+    ANTHROPIC_API_KEY = config('ANTHROPIC_API_KEY')
 
-client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+except Exception as e:
+    print(f"Error initializing API client: {str(e)}")
+    print("API functionality will be disabled")
+    client = None
 
 def send_api_request(conversation_history, max_tokens=MAX_TOKENS):
     system_prompt = SYSTEM_PROMPT
