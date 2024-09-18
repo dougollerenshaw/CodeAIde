@@ -5,14 +5,17 @@ from anthropic import APIError
 from decouple import config
 from codeaide.utils.constants import MAX_TOKENS, AI_MODEL, SYSTEM_PROMPT
 
-try:
-    ANTHROPIC_API_KEY = config('ANTHROPIC_API_KEY')
+def get_anthropic_client():
+    try:
+        api_key = config('ANTHROPIC_API_KEY', default=None)
+        if api_key is None:
+            raise ValueError("ANTHROPIC_API_KEY not found in environment variables")
+        return anthropic.Anthropic(api_key=api_key)
+    except Exception as e:
+        print(f"Error initializing Anthropic API client: {str(e)}")
+        return None
 
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-except Exception as e:
-    print(f"Error initializing API client: {str(e)}")
-    print("API functionality will be disabled")
-    client = None
+client = get_anthropic_client()
 
 def send_api_request(conversation_history, max_tokens=MAX_TOKENS):
     system_prompt = SYSTEM_PROMPT
@@ -61,7 +64,7 @@ def parse_response(response):
         print("Error: Received malformed JSON from the API")
         return None, None, None, None, None, None
 
-def test_api_connection():
+def check_api_connection():
     try:
         response = client.messages.create(
             model=AI_MODEL,
@@ -73,3 +76,7 @@ def test_api_connection():
         return True, response.content[0].text.strip()
     except Exception as e:
         return False, str(e)
+    
+if __name__ == "__main__":
+    success, message = check_api_connection()
+    print(f"Connection {'successful' if success else 'failed'}: {message}")
