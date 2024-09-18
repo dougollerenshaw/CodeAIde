@@ -14,15 +14,18 @@ examples:
       1. A snake that moves around the screen, controlled by arrow keys.
       2. Food items that appear randomly on the screen.
       3. The snake grows longer when it eats food.
-      4. The game ends if the snake hits the screen edges or itself.
+      4. The game ends if the snake hits the screen edges or itself, or if the user hits 'esc'.
       5. Display the current score (number of food items eaten).
       6. A simple "Game Over" screen that shows the final score and allows restarting the game.
 
       Requirements:
       - Use Pygame for graphics and event handling.
-      - The game window should be 640x480 pixels.
+      - The game window should be full screen.
       - The snake and food should be represented by colored rectangles.
-      - The snake should move at a constant speed.
+      - There should be 5 food items on the screen at any time with new ones appearing randomly after the snake eats them.
+      - The snake should move at a constant speed that increases by 5% every time it eats a piece of food.
+      - The snake should start with a length of 3 and grow by 1 each time it eats food.
+      - Be sure to include robust logic for collision detection between the snake, food, and screen edges.
       - Use a clock to control the game's frame rate.
       - Include comments explaining key parts of the code.
       - Handle keyboard events for moving the snake and restarting the game.
