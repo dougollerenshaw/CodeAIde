@@ -104,7 +104,7 @@ CodeAIde is an experimental tool and should be used with caution. Always review 
 
 ## Contact
 
-For any questions or feedback, please open an issue on the GitHub repository or email me directly at d.ollerenshaw@gmail.com.
+For any questions or feedback, please [open an issue](https://github.com/dougollerenshaw/CodeAIde/issues) on the GitHub repository or email me directly at [d.ollerenshaw@gmail.com](mailto:d.ollerenshaw@gmail.com).
 
 ---
 
