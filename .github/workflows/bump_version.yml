@@ -1,4 +1,4 @@
-name: Version Management
+name: Automated Version Management
 
 on:
   pull_request:
