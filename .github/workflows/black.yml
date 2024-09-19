@@ -1,0 +1,25 @@
+name: Black Code Formatter
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: psf/black@stable
+        with:
+          options: "--check --verbose"
+          src: "./codeaide"
+      - name: If needed, commit black changes to the pull request
+        if: failure()
+        run: |
+          black ./codeaide
+          git config --global user.name github-actions
+          git config --global user.email github-actions@github.com
+          git commit -am "Auto-format code with black"
+          git push

@@ -1,15 +1,37 @@
-import sys
 import signal
-from PyQt5.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QMessageBox, QSpacerItem, QSizePolicy, QApplication
+import sys
+
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QColor, QFont
+from PyQt5.QtWidgets import (
+    QApplication,
+    QHBoxLayout,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QSizePolicy,
+    QSpacerItem,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
+
 from codeaide.ui.code_popup import CodePopup
 from codeaide.ui.example_selection_dialog import show_example_dialog
 from codeaide.utils import general_utils
 from codeaide.utils.constants import (
-    CHAT_WINDOW_WIDTH, CHAT_WINDOW_HEIGHT, CHAT_WINDOW_BG, CHAT_WINDOW_FG,
-    USER_MESSAGE_COLOR, AI_MESSAGE_COLOR, USER_FONT, AI_FONT, AI_EMOJI, INITIAL_MESSAGE
+    AI_EMOJI,
+    AI_FONT,
+    AI_MESSAGE_COLOR,
+    CHAT_WINDOW_BG,
+    CHAT_WINDOW_FG,
+    CHAT_WINDOW_HEIGHT,
+    CHAT_WINDOW_WIDTH,
+    INITIAL_MESSAGE,
+    USER_FONT,
+    USER_MESSAGE_COLOR,
 )
+
 
 class ChatWindow(QMainWindow):
     def __init__(self, chat_handler):
@@ -21,10 +43,10 @@ class ChatWindow(QMainWindow):
         self.code_popup = None
         self.setup_ui()
         self.add_to_chat("AI", INITIAL_MESSAGE)
-        
+
         # Set up SIGINT handler
         signal.signal(signal.SIGINT, self.sigint_handler)
-        
+
         # Allow CTRL+C to interrupt the Qt event loop
         self.timer = QTimer()
         self.timer.start(500)  # Timeout in ms
@@ -40,22 +62,26 @@ class ChatWindow(QMainWindow):
         # Chat display
         self.chat_display = QTextEdit(self)
         self.chat_display.setReadOnly(True)
-        self.chat_display.setStyleSheet(f"""
+        self.chat_display.setStyleSheet(
+            f"""
             background-color: {CHAT_WINDOW_BG};
             color: {CHAT_WINDOW_FG};
             border: 1px solid #ccc;
             padding: 5px;
-        """)
+        """
+        )
         main_layout.addWidget(self.chat_display, stretch=3)
 
         # Input area
         self.input_text = QTextEdit(self)
-        self.input_text.setStyleSheet(f"""
+        self.input_text.setStyleSheet(
+            f"""
             background-color: {CHAT_WINDOW_BG};
             color: {USER_MESSAGE_COLOR};
             border: 1px solid #ccc;
             padding: 5px;
-        """)
+        """
+        )
         self.input_text.setAcceptRichText(True)
         self.input_text.setFont(general_utils.set_font(USER_FONT))
         self.input_text.setFixedHeight(100)
@@ -83,7 +109,10 @@ class ChatWindow(QMainWindow):
 
     def eventFilter(self, obj, event):
         if obj == self.input_text and event.type() == event.KeyPress:
-            if event.key() == Qt.Key_Return and not event.modifiers() & Qt.ShiftModifier:
+            if (
+                event.key() == Qt.Key_Return
+                and not event.modifiers() & Qt.ShiftModifier
+            ):
                 self.on_submit()
                 return True
             elif event.key() == Qt.Key_Return and event.modifiers() & Qt.ShiftModifier:
@@ -110,7 +139,7 @@ class ChatWindow(QMainWindow):
         color = USER_MESSAGE_COLOR if sender == "User" else AI_MESSAGE_COLOR
         font = USER_FONT if sender == "User" else AI_FONT
         sender = AI_EMOJI if sender == "AI" else sender
-        
+
         html_message = general_utils.format_chat_message(sender, message, font, color)
         self.chat_display.append(html_message + "<br>")
         self.chat_display.ensureCursorVisible()
@@ -126,22 +155,26 @@ class ChatWindow(QMainWindow):
         self.remove_thinking_messages()
         self.enable_ui_elements()
 
-        if response['type'] == 'message':
-            self.add_to_chat("AI", response['message'])
-        elif response['type'] == 'questions':
-            message = response['message']
-            questions = response['questions']
-            combined_message = f"{message}\n" + "\n".join(f"  * {question}" for question in questions)
+        if response["type"] == "message":
+            self.add_to_chat("AI", response["message"])
+        elif response["type"] == "questions":
+            message = response["message"]
+            questions = response["questions"]
+            combined_message = f"{message}\n" + "\n".join(
+                f"  * {question}" for question in questions
+            )
             self.add_to_chat("AI", combined_message)
             if self.chat_handler.is_task_in_progress():
-                self.add_to_chat("AI", "Please provide answers to these questions to continue.")
-        elif response['type'] == 'code':
-            self.add_to_chat("AI", response['message'])
+                self.add_to_chat(
+                    "AI", "Please provide answers to these questions to continue."
+                )
+        elif response["type"] == "code":
+            self.add_to_chat("AI", response["message"])
             print("About to update or create code popup")
             self.update_or_create_code_popup(response)
             print("Code popup updated or created")
-        elif response['type'] == 'error':
-            self.add_to_chat("AI", response['message'])
+        elif response["type"] == "error":
+            self.add_to_chat("AI", response["message"])
 
     def remove_thinking_messages(self):
         cursor = self.chat_display.textCursor()
@@ -150,7 +183,7 @@ class ChatWindow(QMainWindow):
             cursor.select(cursor.BlockUnderCursor)
             if "Thinking... 🤔" in cursor.selectedText():
                 cursor.removeSelectedText()
-                cursor.deleteChar() 
+                cursor.deleteChar()
             else:
                 cursor.movePosition(cursor.NextBlock)
 
@@ -166,10 +199,18 @@ class ChatWindow(QMainWindow):
 
     def update_or_create_code_popup(self, response):
         if self.code_popup and not self.code_popup.isHidden():
-            self.code_popup.update_with_new_version(response['code'], response.get('requirements', []))
+            self.code_popup.update_with_new_version(
+                response["code"], response.get("requirements", [])
+            )
         else:
-            self.code_popup = CodePopup(None, self.chat_handler.file_handler, response['code'], response.get('requirements', []), self.chat_handler.run_generated_code)
-            self.code_popup.show() 
+            self.code_popup = CodePopup(
+                None,
+                self.chat_handler.file_handler,
+                response["code"],
+                response.get("requirements", []),
+                self.chat_handler.run_generated_code,
+            )
+            self.code_popup.show()
 
     def load_example(self):
         example = show_example_dialog(self)
@@ -179,10 +220,14 @@ class ChatWindow(QMainWindow):
         else:
             QMessageBox.information(self, "No Selection", "No example was selected.")
 
-
     def on_exit(self):
-        reply = QMessageBox.question(self, 'Quit', 'Do you want to quit?', 
-                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        reply = QMessageBox.question(
+            self,
+            "Quit",
+            "Do you want to quit?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
         if reply == QMessageBox.Yes:
             self.close()
 
@@ -195,4 +240,3 @@ class ChatWindow(QMainWindow):
     def sigint_handler(self, *args):
         """Handler for the SIGINT signal."""
         QApplication.quit()
-
