@@ -30,10 +30,11 @@ jobs:
         id: preview
         run: |
           if git log -1 --pretty=%B | grep -qE '^(feat|fix|BREAKING CHANGE):|#(minor|major)'; then
-            NEW_VERSION=$(cz bump --dry-run --yes --list | grep new_version | sed -r s,"^.*=",,)
+            cz bump --dry-run --yes
           else
-            NEW_VERSION=$(cz bump --dry-run --yes --increment PATCH --list | grep new_version | sed -r s,"^.*=",,)
+            cz bump --dry-run --yes --increment PATCH
           fi
+          NEW_VERSION=$(python -c "exec(open('version.py').read()); print(__version__)")
           echo "new_version=$NEW_VERSION" >> $GITHUB_ENV
 
       - name: Comment PR
@@ -75,8 +76,8 @@ jobs:
           else
             cz bump --increment PATCH --yes
           fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_VERSION=$(python -c "exec(open('version.py').read()); print(__version__)")
+          echo "new_version=$NEW_VERSION" >> $GITHUB_ENV
 
       - name: Push changes
         uses: ad-m/github-push-action@master
@@ -86,4 +87,4 @@ jobs:
           tags: true
 
       - name: Print Version
-        run: echo "Bumped to version ${{ steps.bump.outputs.new_version }}"
+        run: echo "Bumped to version ${{ env.new_version }}"
