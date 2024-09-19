@@ -1,8 +1,8 @@
 import signal
 import sys
+import traceback
 
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal
-from PyQt5.QtGui import QColor, QFont
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -41,46 +41,33 @@ class ChatWindow(QMainWindow):
         self.chat_handler = chat_handler
         self.cost_tracker = chat_handler.cost_tracker
         self.code_popup = None
+        self.waiting_for_api_key = False
         self.setup_ui()
         self.add_to_chat("AI", INITIAL_MESSAGE)
+        self.check_api_key()
 
-        # Set up SIGINT handler
         signal.signal(signal.SIGINT, self.sigint_handler)
-
-        # Allow CTRL+C to interrupt the Qt event loop
         self.timer = QTimer()
-        self.timer.start(500)  # Timeout in ms
-        self.timer.timeout.connect(lambda: None)  # Let the interpreter run each 500 ms
+        self.timer.start(500)
+        self.timer.timeout.connect(lambda: None)
 
     def setup_ui(self):
         central_widget = QWidget(self)
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
-        main_layout.setSpacing(5)  # Space between main components
-        main_layout.setContentsMargins(8, 8, 8, 8)  # Margins around the entire window
+        main_layout.setSpacing(5)
+        main_layout.setContentsMargins(8, 8, 8, 8)
 
-        # Chat display
         self.chat_display = QTextEdit(self)
         self.chat_display.setReadOnly(True)
         self.chat_display.setStyleSheet(
-            f"""
-            background-color: {CHAT_WINDOW_BG};
-            color: {CHAT_WINDOW_FG};
-            border: 1px solid #ccc;
-            padding: 5px;
-        """
+            f"background-color: {CHAT_WINDOW_BG}; color: {CHAT_WINDOW_FG}; border: 1px solid #ccc; padding: 5px;"
         )
         main_layout.addWidget(self.chat_display, stretch=3)
 
-        # Input area
         self.input_text = QTextEdit(self)
         self.input_text.setStyleSheet(
-            f"""
-            background-color: {CHAT_WINDOW_BG};
-            color: {USER_MESSAGE_COLOR};
-            border: 1px solid #ccc;
-            padding: 5px;
-        """
+            f"background-color: {CHAT_WINDOW_BG}; color: {USER_MESSAGE_COLOR}; border: 1px solid #ccc; padding: 5px;"
         )
         self.input_text.setAcceptRichText(True)
         self.input_text.setFont(general_utils.set_font(USER_FONT))
@@ -89,9 +76,8 @@ class ChatWindow(QMainWindow):
         self.input_text.installEventFilter(self)
         main_layout.addWidget(self.input_text, stretch=1)
 
-        # Button layout
         button_layout = QHBoxLayout()
-        button_layout.setSpacing(5)  # Space between buttons
+        button_layout.setSpacing(5)
 
         self.submit_button = QPushButton("Submit")
         self.submit_button.clicked.connect(self.on_submit)
@@ -122,7 +108,6 @@ class ChatWindow(QMainWindow):
     def on_submit(self):
         user_input = self.input_text.toPlainText().strip()
         if user_input:
-            print(f"ChatWindow: Received submission: {user_input}")
             self.add_to_chat("User", user_input)
             self.input_text.clear()
             self.display_thinking()
@@ -135,11 +120,9 @@ class ChatWindow(QMainWindow):
         self.input_text.ensureCursorVisible()
 
     def add_to_chat(self, sender, message):
-        print(f"ChatWindow: Adding to chat - {sender}: {message}")
         color = USER_MESSAGE_COLOR if sender == "User" else AI_MESSAGE_COLOR
         font = USER_FONT if sender == "User" else AI_FONT
         sender = AI_EMOJI if sender == "AI" else sender
-
         html_message = general_utils.format_chat_message(sender, message, font, color)
         self.chat_display.append(html_message + "<br>")
         self.chat_display.ensureCursorVisible()
@@ -148,11 +131,42 @@ class ChatWindow(QMainWindow):
         self.add_to_chat("AI", "Thinking... 🤔")
 
     def process_input(self, user_input):
-        response = self.chat_handler.process_input(user_input)
-        QTimer.singleShot(100, lambda: self.handle_response(response))
+        try:
+            if self.waiting_for_api_key:
+                self.handle_api_key_input(user_input)
+            else:
+                response = self.chat_handler.process_input(user_input)
+                self.handle_response(response)
+        except Exception as e:
+            error_message = f"An unexpected error occurred: {str(e)}. Please check the console window for the full traceback."
+            self.add_to_chat("AI", error_message)
+            print("Unexpected error in ChatWindow process_input:", file=sys.stderr)
+            traceback.print_exc()
+        finally:
+            self.enable_ui_elements()
+
+    def check_api_key(self):
+        api_key_valid, message = self.chat_handler.check_api_key()
+        if not api_key_valid:
+            self.add_to_chat("AI", message)
+            self.waiting_for_api_key = True
+        else:
+            self.waiting_for_api_key = False
+
+    def handle_api_key_input(self, api_key):
+        success, message = self.chat_handler.handle_api_key_input(api_key)
+        self.remove_thinking_messages()
+        if success:
+            self.waiting_for_api_key = False
+            self.add_to_chat(
+                "AI",
+                "Great! Your API key has been saved. What would you like to work on?",
+            )
+        else:
+            self.add_to_chat("AI", message)
+        self.enable_ui_elements()
 
     def handle_response(self, response):
-        self.remove_thinking_messages()
         self.enable_ui_elements()
 
         if response["type"] == "message":
@@ -170,10 +184,11 @@ class ChatWindow(QMainWindow):
                 )
         elif response["type"] == "code":
             self.add_to_chat("AI", response["message"])
-            print("About to update or create code popup")
             self.update_or_create_code_popup(response)
-            print("Code popup updated or created")
-        elif response["type"] == "error":
+        elif response["type"] in ["error", "internal_error"]:
+            self.add_to_chat("AI", response["message"])
+        elif response["type"] == "api_key_required":
+            self.waiting_for_api_key = True
             self.add_to_chat("AI", response["message"])
 
     def remove_thinking_messages(self):
@@ -238,5 +253,4 @@ class ChatWindow(QMainWindow):
         super().closeEvent(event)
 
     def sigint_handler(self, *args):
-        """Handler for the SIGINT signal."""
         QApplication.quit()

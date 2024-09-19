@@ -1,28 +1,80 @@
+import os
 import json
 import re
-
 import anthropic
 from anthropic import APIError
-from decouple import config
+from decouple import config, AutoConfig
 
 from codeaide.utils.constants import AI_MODEL, MAX_TOKENS, SYSTEM_PROMPT
 
 
-def get_anthropic_client():
+class MissingAPIKeyException(Exception):
+    def __init__(self, service):
+        self.service = service
+        super().__init__(
+            f"{service.upper()}_API_KEY not found in environment variables"
+        )
+
+
+def get_api_client(service="anthropic"):
     try:
-        api_key = config("ANTHROPIC_API_KEY", default=None)
+        # Force a reload of the configuration
+        auto_config = AutoConfig(
+            search_path=os.path.dirname(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            )
+        )
+        api_key = auto_config(f"{service.upper()}_API_KEY", default=None)
         if api_key is None:
-            raise ValueError("ANTHROPIC_API_KEY not found in environment variables")
-        return anthropic.Anthropic(api_key=api_key)
+            raise MissingAPIKeyException(service)
+
+        if service == "anthropic":
+            return anthropic.Anthropic(api_key=api_key)
+        # Add more elif blocks here for other API services
+        else:
+            raise ValueError(f"Unsupported service: {service}")
+    except MissingAPIKeyException:
+        # If the API key is missing, return None instead of raising the exception
+        return None
     except Exception as e:
-        print(f"Error initializing Anthropic API client: {str(e)}")
+        print(f"Error initializing {service.capitalize()} API client: {str(e)}")
         return None
 
 
-client = get_anthropic_client()
+def save_api_key(service, api_key):
+    try:
+        cleaned_key = api_key.strip().strip("'\"")  # Remove quotes and whitespace
+        root_dir = os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        )
+        env_path = os.path.join(root_dir, ".env")
+
+        if os.path.exists(env_path):
+            with open(env_path, "r") as file:
+                lines = file.readlines()
+
+            key_exists = False
+            for i, line in enumerate(lines):
+                if line.startswith(f"{service.upper()}_API_KEY="):
+                    lines[i] = f'{service.upper()}_API_KEY="{cleaned_key}"\n'
+                    key_exists = True
+                    break
+
+            if not key_exists:
+                lines.append(f'{service.upper()}_API_KEY="{cleaned_key}"\n')
+        else:
+            lines = [f'{service.upper()}_API_KEY="{cleaned_key}"\n']
+
+        with open(env_path, "w") as file:
+            file.writelines(lines)
+
+        return True
+    except Exception as e:
+        print(f"Error saving API key: {str(e)}")
+        return False
 
 
-def send_api_request(conversation_history, max_tokens=MAX_TOKENS):
+def send_api_request(client, conversation_history, max_tokens=MAX_TOKENS):
     system_prompt = SYSTEM_PROMPT
     try:
         print(f"\n\n{'='*50}\n")
@@ -44,13 +96,13 @@ def send_api_request(conversation_history, max_tokens=MAX_TOKENS):
 
         if not content:
             print("Warning: Received empty response from API")
-            return None, True
+            return None
 
         return response
 
     except Exception as e:
         print(f"Error in API request: {str(e)}")
-        return None, True
+        return None
 
 
 def parse_response(response):
@@ -73,14 +125,19 @@ def parse_response(response):
         return None, None, None, None, None, None
 
 
-def check_api_connection():
+def check_api_connection(service="anthropic"):
+    client = get_api_client(service)
     try:
-        response = client.messages.create(
-            model=AI_MODEL,
-            max_tokens=100,
-            messages=[{"role": "user", "content": "Hi Claude, are we communicating?"}],
-        )
-        return True, response.content[0].text.strip()
+        if service == "anthropic":
+            response = client.messages.create(
+                model=AI_MODEL,
+                max_tokens=100,
+                messages=[{"role": "user", "content": "Hi, are we communicating?"}],
+            )
+            return True, response.content[0].text.strip()
+        # Add more elif blocks here for other API services
+        else:
+            raise ValueError(f"Unsupported service: {service}")
     except Exception as e:
         return False, str(e)
 
