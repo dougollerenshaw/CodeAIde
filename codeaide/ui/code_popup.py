@@ -1,7 +1,13 @@
 import os
-
-from PyQt5.QtCore import QRect, Qt
-from PyQt5.QtGui import QFont
+from PyQt5.QtCore import QRect, Qt, QRegExp, QSize
+from PyQt5.QtGui import (
+    QFont,
+    QTextCharFormat,
+    QColor,
+    QSyntaxHighlighter,
+    QPainter,
+    QPen,
+)
 from PyQt5.QtWidgets import (
     QApplication,
     QComboBox,
@@ -12,7 +18,11 @@ from PyQt5.QtWidgets import (
     QTextEdit,
     QVBoxLayout,
     QWidget,
+    QPlainTextEdit,
 )
+from pygments import highlight
+from pygments.lexers import PythonLexer
+from pygments.formatters import HtmlFormatter
 
 from codeaide.utils import general_utils
 from codeaide.utils.constants import (
@@ -22,6 +32,212 @@ from codeaide.utils.constants import (
     CODE_WINDOW_HEIGHT,
     CODE_WINDOW_WIDTH,
 )
+
+
+class LineNumberArea(QWidget):
+    def __init__(self, editor):
+        super().__init__(editor)
+        self.editor = editor
+
+    def sizeHint(self):
+        return QSize(self.editor.line_number_area_width(), 0)
+
+    def paintEvent(self, event):
+        self.editor.line_number_area_paint_event(event)
+
+
+class CodeEditor(QPlainTextEdit):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.line_number_area = LineNumberArea(self)
+        self.blockCountChanged.connect(self.update_line_number_area_width)
+        self.updateRequest.connect(self.update_line_number_area)
+        self.update_line_number_area_width(0)
+
+        # Set editor background color
+        self.setStyleSheet(
+            f"background-color: {CODE_WINDOW_BG}; color: {CODE_WINDOW_FG};"
+        )
+
+        # Add extra space at the bottom for the horizontal scrollbar
+        self.setViewportMargins(0, 0, 0, self.horizontalScrollBar().height())
+
+    def line_number_area_width(self):
+        digits = len(str(max(1, self.blockCount())))
+        space = 3 + self.fontMetrics().horizontalAdvance("9") * digits
+        return space
+
+    def update_line_number_area_width(self, _):
+        self.setViewportMargins(
+            self.line_number_area_width(), 0, 0, self.horizontalScrollBar().height()
+        )
+
+    def update_line_number_area(self, rect, dy):
+        if dy:
+            self.line_number_area.scroll(0, dy)
+        else:
+            self.line_number_area.update(
+                0, rect.y(), self.line_number_area.width(), rect.height()
+            )
+        if rect.contains(self.viewport().rect()):
+            self.update_line_number_area_width(0)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        cr = self.contentsRect()
+        self.line_number_area.setGeometry(
+            QRect(cr.left(), cr.top(), self.line_number_area_width(), cr.height())
+        )
+
+        # Update the bottom margin when the widget is resized
+        self.setViewportMargins(
+            self.line_number_area_width(), 0, 0, self.horizontalScrollBar().height()
+        )
+
+    def line_number_area_paint_event(self, event):
+        painter = QPainter(self.line_number_area)
+
+        # Set the background color to match the editor
+        painter.fillRect(event.rect(), QColor(CODE_WINDOW_BG))
+
+        # Get a dimmer version of the text color for line numbers and box
+        dimmer_color = general_utils.get_dimmer_color(CODE_WINDOW_FG)
+
+        # Draw a subtle box around the line number area
+        painter.setPen(QPen(dimmer_color, 1))
+        painter.drawRect(event.rect().adjusted(0, 0, -1, -1))
+
+        block = self.firstVisibleBlock()
+        block_number = block.blockNumber()
+        top = self.blockBoundingGeometry(block).translated(self.contentOffset()).top()
+        bottom = top + self.blockBoundingRect(block).height()
+
+        while block.isValid() and top <= event.rect().bottom():
+            if block.isVisible() and bottom >= event.rect().top():
+                number = str(block_number + 1)
+                painter.setPen(dimmer_color)
+                painter.drawText(
+                    0,
+                    top,
+                    self.line_number_area.width() - 5,
+                    self.fontMetrics().height(),
+                    Qt.AlignRight,
+                    number,
+                )
+            block = block.next()
+            top = bottom
+            bottom = top + self.blockBoundingRect(block).height()
+            block_number += 1
+
+
+class PythonHighlighter(QSyntaxHighlighter):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.highlighting_rules = []
+
+        # Define color scheme for dark background
+        self.colors = {
+            "keyword": QColor("#ff79c6"),  # Pink
+            "operator": QColor("#ff79c6"),  # Pink
+            "brace": QColor("#f8f8f2"),  # White
+            "defclass": QColor("#50fa7b"),  # Green
+            "string": QColor("#f1fa8c"),  # Yellow
+            "string2": QColor("#f1fa8c"),  # Yellow
+            "comment": QColor("#6272a4"),  # Blue-grey
+            "self": QColor("#bd93f9"),  # Purple
+            "numbers": QColor("#bd93f9"),  # Purple
+            "boolean": QColor("#ff5555"),  # Red
+            "identifier": QColor("#f8f8f2"),  # White
+        }
+
+        # Keyword, operator, and brace rules
+        keyword_format = QTextCharFormat()
+        keyword_format.setForeground(self.colors["keyword"])
+        keyword_format.setFontWeight(QFont.Bold)
+        keywords = [
+            "and",
+            "assert",
+            "break",
+            "class",
+            "continue",
+            "def",
+            "del",
+            "elif",
+            "else",
+            "except",
+            "exec",
+            "finally",
+            "for",
+            "from",
+            "global",
+            "if",
+            "import",
+            "in",
+            "is",
+            "lambda",
+            "not",
+            "or",
+            "pass",
+            "print",
+            "raise",
+            "return",
+            "try",
+            "while",
+            "yield",
+            "None",
+            "True",
+            "False",
+        ]
+
+        for word in keywords:
+            pattern = QRegExp("\\b" + word + "\\b")
+            self.highlighting_rules.append((pattern, keyword_format))
+
+        # Class name
+        class_format = QTextCharFormat()
+        class_format.setFontWeight(QFont.Bold)
+        class_format.setForeground(self.colors["defclass"])
+        self.highlighting_rules.append((QRegExp("\\bclass\\b\\s*(\\w+)"), class_format))
+
+        # Function name
+        function_format = QTextCharFormat()
+        function_format.setFontItalic(True)
+        function_format.setForeground(self.colors["defclass"])
+        self.highlighting_rules.append(
+            (QRegExp("\\bdef\\b\\s*(\\w+)"), function_format)
+        )
+
+        # String
+        string_format = QTextCharFormat()
+        string_format.setForeground(self.colors["string"])
+        self.highlighting_rules.append((QRegExp('".*"'), string_format))
+        self.highlighting_rules.append((QRegExp("'.*'"), string_format))
+
+        # Comment
+        comment_format = QTextCharFormat()
+        comment_format.setForeground(self.colors["comment"])
+        self.highlighting_rules.append((QRegExp("#[^\n]*"), comment_format))
+
+        # Numbers
+        number_format = QTextCharFormat()
+        number_format.setForeground(self.colors["numbers"])
+        self.highlighting_rules.append((QRegExp("\\b[0-9]+\\b"), number_format))
+
+        # Self
+        self_format = QTextCharFormat()
+        self_format.setForeground(self.colors["self"])
+        self_format.setFontItalic(True)
+        self.highlighting_rules.append((QRegExp("\\bself\\b"), self_format))
+
+    def highlightBlock(self, text):
+        for pattern, format in self.highlighting_rules:
+            expression = QRegExp(pattern)
+            index = expression.indexIn(text)
+            while index >= 0:
+                length = expression.matchedLength()
+                self.setFormat(index, length, format)
+                index = expression.indexIn(text, index + length)
+        self.setCurrentBlockState(0)
 
 
 class CodePopup(QWidget):
@@ -35,18 +251,17 @@ class CodePopup(QWidget):
         self.load_versions()
         self.show_code(code, requirements)
         self.position_window()
-        self.loading_versions = (
-            False  # Prevents multiple calls to on_version_change method
-        )
+        self.loading_versions = False
         self.show()
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
-        layout.setSpacing(5)  # Space between main components
-        layout.setContentsMargins(8, 8, 8, 8)  # Margins around the entire window
+        layout.setSpacing(5)
+        layout.setContentsMargins(8, 8, 8, 8)
 
-        self.text_area = QTextEdit(self)
+        self.text_area = CodeEditor(self)
         self.text_area.setReadOnly(True)
+        self.text_area.setLineWrapMode(QPlainTextEdit.NoWrap)
         self.text_area.setStyleSheet(
             f"""
             background-color: {CODE_WINDOW_BG};
@@ -56,6 +271,7 @@ class CodePopup(QWidget):
         """
         )
         self.text_area.setFont(general_utils.set_font(CODE_FONT))
+        self.highlighter = PythonHighlighter(self.text_area.document())
         layout.addWidget(self.text_area)
 
         controls_layout = QVBoxLayout()
