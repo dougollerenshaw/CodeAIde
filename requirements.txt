@@ -3,6 +3,6 @@ python-decouple==3.8
 virtualenv==20.16.2
 pyyaml
 pytest
-black==22.6.0
-isort==5.10.1
-pre-commit==2.20.0
+black
+isort
+pre-commit
