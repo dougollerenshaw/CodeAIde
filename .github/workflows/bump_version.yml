@@ -29,12 +29,11 @@ jobs:
       - name: Preview version bump
         id: preview
         run: |
-          if git log -1 --pretty=%B | grep -qE '^(feat|fix|BREAKING CHANGE):|#(minor|major)'; then
-            cz bump --dry-run --yes
-          else
-            cz bump --dry-run --yes --increment PATCH
-          fi
+          # Always bump the patch version by default
+          cz bump --dry-run --yes --increment PATCH
+          # Extract the new version from version.py
           NEW_VERSION=$(python -c "exec(open('version.py').read()); print(__version__)")
+          # Set the new version as an environment variable
           echo "new_version=$NEW_VERSION" >> $GITHUB_ENV
 
       - name: Comment PR
@@ -42,6 +41,7 @@ jobs:
         with:
           github-token: ${{ secrets.PAT }}
           script: |
+            # Comment on the pull request with the new version
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: 'dougollerenshaw',
@@ -71,12 +71,11 @@ jobs:
       - name: Bump version
         id: bump
         run: |
-          if git log -1 --pretty=%B | grep -qE '^(feat|fix|BREAKING CHANGE):|#(minor|major)'; then
-            cz bump --yes
-          else
-            cz bump --increment PATCH --yes
-          fi
+          # Always bump the patch version by default
+          cz bump --increment PATCH --yes
+          # Extract the new version from version.py
           NEW_VERSION=$(python -c "exec(open('version.py').read()); print(__version__)")
+          # Set the new version as an environment variable
           echo "new_version=$NEW_VERSION" >> $GITHUB_ENV
 
       - name: Push changes
