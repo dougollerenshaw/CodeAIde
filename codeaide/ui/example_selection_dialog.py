@@ -1,7 +1,16 @@
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QListWidget, QPushButton, QTextBrowser, QSplitter
 from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (
+    QDialog,
+    QListWidget,
+    QPushButton,
+    QSplitter,
+    QTextBrowser,
+    QVBoxLayout,
+)
+
 from codeaide.utils import general_utils
 from codeaide.utils.constants import CHAT_WINDOW_BG, CHAT_WINDOW_FG
+
 
 class ExampleSelectionDialog(QDialog):
     def __init__(self, parent=None):
@@ -12,17 +21,17 @@ class ExampleSelectionDialog(QDialog):
         self.layout = QVBoxLayout()
 
         self.layout.setSpacing(5)
-        self.layout.setContentsMargins(8, 8, 8, 8) 
+        self.layout.setContentsMargins(8, 8, 8, 8)
 
         # Create a splitter to divide the list and preview
         self.splitter = QSplitter(Qt.Vertical)
 
         self.example_list = QListWidget()
         self.preview_text = QTextBrowser()
-        
+
         self.splitter.addWidget(self.example_list)
         self.splitter.addWidget(self.preview_text)
-        
+
         # Set the ratio to 1:3 (20% list, 80% preview)
         self.splitter.setStretchFactor(0, 1)
         self.splitter.setStretchFactor(1, 4)
@@ -43,13 +52,13 @@ class ExampleSelectionDialog(QDialog):
 
     def load_examples(self):
         for example in self.examples:
-            self.example_list.addItem(example['description'])
+            self.example_list.addItem(example["description"])
 
     def update_preview(self, current, previous):
         if current:
             for example in self.examples:
-                if example['description'] == current.text():
-                    self.preview_text.setPlainText(example['prompt'])
+                if example["description"] == current.text():
+                    self.preview_text.setPlainText(example["prompt"])
                     break
 
     def get_selected_example(self):
@@ -57,9 +66,10 @@ class ExampleSelectionDialog(QDialog):
         if selected_items:
             selected_description = selected_items[0].text()
             for example in self.examples:
-                if example['description'] == selected_description:
-                    return example['prompt']
+                if example["description"] == selected_description:
+                    return example["prompt"]
         return None
+
 
 def show_example_dialog(parent):
     dialog = ExampleSelectionDialog(parent)
