@@ -36,16 +36,43 @@ jobs:
           # Set the new version as an environment variable
           echo "new_version=$NEW_VERSION" >> $GITHUB_ENV
 
-      - name: Comment PR
+      - name: Find existing comment
+        id: find_comment
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.PAT }}
           script: |
-            # Comment on the pull request with the new version
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const comment = comments.find(comment => comment.user.login === 'github-actions[bot]' && comment.body.includes('When merged, this PR will bump the version to:'));
+            return comment ? comment.id : null;
+
+      - name: Comment PR
+        if: steps.find_comment.outputs.result == null
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.PAT }}
+          script: |
             github.rest.issues.createComment({
               issue_number: context.issue.number,
-              owner: 'dougollerenshaw',
-              repo: 'CodeAIde',
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `When merged, this PR will bump the version to: ${process.env.new_version}`
+            })
+
+      - name: Update PR Comment
+        if: steps.find_comment.outputs.result != null
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.PAT }}
+          script: |
+            github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: steps.find_comment.outputs.result,
               body: `When merged, this PR will bump the version to: ${process.env.new_version}`
             })
 
