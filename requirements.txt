@@ -8,3 +8,4 @@ isort
 pre-commit
 pyqt5
 bump2version
+commitizen

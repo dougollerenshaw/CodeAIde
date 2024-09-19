@@ -23,8 +23,8 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install commitizen
-        run: pip install commitizen
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
       - name: Preview version bump
         id: preview
@@ -65,8 +65,8 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install commitizen
-        run: pip install commitizen
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
       - name: Bump version
         id: cz
