@@ -1,106 +1,19 @@
-name: Automated Version Management
+name: Release
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches:
-      - main
+      - release
 
 jobs:
-  preview-bump:
-    if: github.event_name == 'pull_request'
+  bump-version-and-release:
     runs-on: ubuntu-latest
-    name: "Preview version bump"
     steps:
-      - name: Check out
+      - name: Check out code
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.x'
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Configure Git
-        run: |
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-
-      - name: Preview version bump
-        id: preview
-        run: |
-          # Get the current version
-          CURRENT_VERSION=$(python -c "exec(open('version.py').read()); print(__version__)")
-          echo "Current version: $CURRENT_VERSION"
-          # Perform the actual version bump
-          cz bump --yes --increment PATCH
-          # Debug: Print the contents of version.py
-          echo "Contents of version.py after bump:"
-          cat version.py
-          # Extract the new version from version.py
-          NEW_VERSION=$(python -c "exec(open('version.py').read()); print(__version__)")
-          echo "Extracted new version: $NEW_VERSION"
-          # Set the new version as an environment variable
-          echo "new_version=$NEW_VERSION" >> $GITHUB_ENV
-          # Set the current version as an environment variable
-          echo "current_version=$CURRENT_VERSION" >> $GITHUB_ENV
-
-      - name: Find existing comment
-        id: find_comment
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.PAT }}
-          script: |
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-            const comment = comments.find(comment => comment.user.login === 'github-actions[bot]' && comment.body.includes('When merged, this PR will bump the version to:'));
-            return { id: comment ? comment.id : null };
-
-      - name: Comment PR
-        if: steps.find_comment.outputs.id == null
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.PAT }}
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `The current version is ${process.env.current_version}, when merged, this PR will bump the version to: ${process.env.new_version}`
-            })
-
-      - name: Update PR Comment
-        if: steps.find_comment.outputs.id != null
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.PAT }}
-          script: |
-            github.rest.issues.updateComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: steps.find_comment.outputs.id,
-              body: `The current version is ${process.env.current_version}, when merged, this PR will bump the version to: ${process.env.new_version}`
-            })
-
-  bump-version:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    name: "Bump version and create changelog"
-    steps:
-      - name: Check out
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-          token: "${{ secrets.GITHUB_TOKEN }}"
-      
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
@@ -117,23 +30,26 @@ jobs:
       - name: Bump version
         id: bump
         run: |
-          # Perform the actual version bump
-          cz bump --increment PATCH --yes
-          # Debug: Print the contents of version.py
-          echo "Contents of version.py after bump:"
-          cat version.py
-          # Extract the new version from version.py
-          NEW_VERSION=$(python -c "exec(open('version.py').read()); print(__version__)")
-          echo "Extracted new version: $NEW_VERSION"
-          # Set the new version as an environment variable
+          cz bump --yes --increment PATCH
+          NEW_VERSION=$(python -c 'exec(open("version.py").read()); print(__version__)')
           echo "new_version=$NEW_VERSION" >> $GITHUB_ENV
 
-      - name: Push changes
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ github.ref }}
-          tags: true
+      - name: Commit and push changes
+        run: |
+          git add version.py CHANGELOG.md
+          git commit -m "chore: bump version to ${{ env.new_version }}"
+          git tag v${{ env.new_version }}
+          git push origin release --tags
 
-      - name: Print Version
-        run: echo "Bumped to version ${{ env.new_version }}"
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        with:
+          tag_name: v${{ env.new_version }}
+          release_name: Release ${{ env.new_version }}
+          body: |
+            ## Changes
+            - Description of changes in this release.
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

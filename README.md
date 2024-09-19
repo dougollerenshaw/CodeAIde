@@ -106,6 +106,66 @@ CodeAIde is an experimental tool and should be used with caution. Always review 
 
 For any questions or feedback, please [open an issue](https://github.com/dougollerenshaw/CodeAIde/issues) on the GitHub repository or email me directly at [d.ollerenshaw@gmail.com](mailto:d.ollerenshaw@gmail.com).
 
+## Versioning and Releases
+
+### Versioning Process
+
+We use [Commitizen](https://commitizen-tools.github.io/commitizen/) to manage versioning based on conventional commits. The version is automatically bumped, and a changelog is generated when changes are pushed to the `release` branch.
+
+### Creating a Release
+
+To create a new release, follow these steps:
+
+1. **Create a Release Branch**:
+   - Create a new branch from `main` named `release`.
+
+   ```
+   git checkout main
+   git pull origin main
+   git checkout -b release
+   git push origin release
+   ```
+
+2. **Prepare the Release**:
+   - Make any necessary changes in the release branch, including version bumps and changelog updates.
+   - Push the changes to the release branch to trigger the release workflow.
+
+### Version Bump and Release Workflow
+
+The following steps are automatically performed by the GitHub Actions workflow when changes are pushed to the `release` branch:
+
+- **Check out Code**:  
+  The workflow checks out the code with full history to ensure version bumps are accurate.
+  
+- **Set up Python**:  
+  The workflow sets up the Python environment.
+  
+- **Install Dependencies**:  
+  The workflow installs the required dependencies.
+  
+- **Configure Git**:  
+  The workflow configures Git with a bot user.
+  
+- **Bump Version**:  
+  The workflow uses Commitizen to bump the version and update `version.py`.
+  
+- **Commit and Push Changes**:  
+  The workflow commits and pushes the changes to the release branch, including tags.
+  
+- **Create GitHub Release**:  
+  The workflow creates a GitHub release with the new version.
+
+3. **Merge Back to Main**:
+
+Once the release is finalized, merge the `release` branch back into `main` and tag the new version.
+
+   ```
+   git checkout main
+   git pull origin main
+   git merge release
+   git push origin main
+   ```
+
 ---
 
 **Note:** This project is currently in development. Features and usage may change as the project evolves.
