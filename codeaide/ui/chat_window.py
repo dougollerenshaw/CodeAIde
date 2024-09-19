@@ -3,6 +3,7 @@ import sys
 import traceback
 
 from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -46,6 +47,8 @@ class ChatWindow(QMainWindow):
         self.add_to_chat("AI", INITIAL_MESSAGE)
         self.check_api_key()
 
+        self.input_text.setTextColor(QColor(CHAT_WINDOW_FG))
+
         signal.signal(signal.SIGINT, self.sigint_handler)
         self.timer = QTimer()
         self.timer.start(500)
@@ -67,9 +70,14 @@ class ChatWindow(QMainWindow):
 
         self.input_text = QTextEdit(self)
         self.input_text.setStyleSheet(
-            f"background-color: {CHAT_WINDOW_BG}; color: {USER_MESSAGE_COLOR}; border: 1px solid #ccc; padding: 5px;"
+            f"""
+            background-color: {CHAT_WINDOW_BG};
+            color: {CHAT_WINDOW_FG};
+            border: 1px solid #ccc;
+            padding: 5px;
+        """
         )
-        self.input_text.setAcceptRichText(True)
+        self.input_text.setAcceptRichText(False)  # Add this line
         self.input_text.setFont(general_utils.set_font(USER_FONT))
         self.input_text.setFixedHeight(100)
         self.input_text.textChanged.connect(self.on_modify)
