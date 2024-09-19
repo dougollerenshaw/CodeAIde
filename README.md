@@ -53,17 +53,6 @@ https://github.com/user-attachments/assets/8aa729ff-c431-4a61-a9ef-d17050a27d02
 
 ## Usage
 
-To test the API connection, run:
-
-```
-python codeaide.py test
-```
-This will send a simple "Hi Claude, are we communicating?" prompt to the API. If your API key is set up properly and you have an internet connection, you'll see a response at the command line that looks something like this:
-```
-Connection successful!
-Claude says: Yes, we are communicating! I'm Claude, an AI assistant. How can I help you today?
-```
-
 To start CodeAIde for actual code generation, run:
 
 ```
@@ -78,6 +67,18 @@ Follow the prompts to interact with the AI assistant. You can:
 - Request changes or improvements from the LLM (the previous code will remain in the model's context window)
 - Copy the code to your clipboard or save it as a standalone file
 - Select and re-run any previous version of the code form the current conversation.
+
+
+To test the API connection, run:
+
+```
+python codeaide.py test
+```
+This will send a simple "Hi Claude, are we communicating?" prompt to the API. If your API key is set up properly and you have an internet connection, you'll see a response at the command line that looks something like this:
+```
+Connection successful!
+Claude says: Yes, we are communicating! I'm Claude, an AI assistant. How can I help you today?
+```
 
 ## Future feature roadmap
 
