@@ -29,10 +29,13 @@ jobs:
       - name: Preview version bump
         id: preview
         run: |
-          # Always bump the patch version by default
-          cz bump --dry-run --yes --increment PATCH
+          # Perform the actual version bump
+          cz bump --yes --increment PATCH
+          # Debug: Print the contents of version.py
+          cat version.py
           # Extract the new version from version.py
           NEW_VERSION=$(python -c "exec(open('version.py').read()); print(__version__)")
+          echo "Extracted new version: $NEW_VERSION"
           # Set the new version as an environment variable
           echo "new_version=$NEW_VERSION" >> $GITHUB_ENV
 
@@ -98,10 +101,11 @@ jobs:
       - name: Bump version
         id: bump
         run: |
-          # Always bump the patch version by default
+          # Perform the actual version bump
           cz bump --increment PATCH --yes
           # Extract the new version from version.py
           NEW_VERSION=$(python -c "exec(open('version.py').read()); print(__version__)")
+          echo "Extracted new version: $NEW_VERSION"
           # Set the new version as an environment variable
           echo "new_version=$NEW_VERSION" >> $GITHUB_ENV
 
