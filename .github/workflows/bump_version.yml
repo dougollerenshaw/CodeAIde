@@ -30,9 +30,9 @@ jobs:
         id: preview
         run: |
           if git log -1 --pretty=%B | grep -qE '^(feat|fix|BREAKING CHANGE):|#(minor|major)'; then
-            NEW_VERSION=$(cz bump --dry-run)
+            NEW_VERSION=$(cz bump --dry-run --yes --list | grep new_version | sed -r s,"^.*=",,)
           else
-            NEW_VERSION=$(cz bump --increment PATCH --dry-run)
+            NEW_VERSION=$(cz bump --dry-run --yes --increment PATCH --list | grep new_version | sed -r s,"^.*=",,)
           fi
           echo "New version would be: $NEW_VERSION"
           echo "::set-output name=new_version::$NEW_VERSION"
@@ -69,7 +69,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Bump version
-        id: cz
+        id: bump
         run: |
           if git log -1 --pretty=%B | grep -qE '^(feat|fix|BREAKING CHANGE):|#(minor|major)'; then
             cz bump --yes
@@ -87,4 +87,4 @@ jobs:
           tags: true
 
       - name: Print Version
-        run: echo "Bumped to version ${{ steps.cz.outputs.version }}"
+        run: echo "Bumped to version ${{ steps.bump.outputs.new_version }}"
