@@ -1,7 +1,7 @@
 import os
 
 import yaml
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QFont, QColor
 
 # Store the path of the general_utils.py file
 UTILS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -55,6 +55,20 @@ def set_font(font_tuple):
     # "normal" is the default, so we don't need to do anything for it
 
     return qfont
+
+
+def get_dimmer_color(color, factor=0.6):
+    """
+    Generate a dimmer version of the given color.
+    Works for both light and dark backgrounds.
+    """
+    color = QColor(color)
+    if color.lightnessF() > 0.5:
+        # For light colors, make it darker
+        return color.darker(int(100 / factor))
+    else:
+        # For dark colors, make it lighter
+        return color.lighter(int(100 * factor))
 
 
 def format_chat_message(sender, message, font, color):
