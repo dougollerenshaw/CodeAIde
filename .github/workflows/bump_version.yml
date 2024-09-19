@@ -34,6 +34,9 @@ jobs:
       - name: Preview version bump
         id: preview
         run: |
+          # Get the current version
+          CURRENT_VERSION=$(python -c "exec(open('version.py').read()); print(__version__)")
+          echo "Current version: $CURRENT_VERSION"
           # Perform the actual version bump
           cz bump --yes --increment PATCH
           # Debug: Print the contents of version.py
@@ -44,6 +47,8 @@ jobs:
           echo "Extracted new version: $NEW_VERSION"
           # Set the new version as an environment variable
           echo "new_version=$NEW_VERSION" >> $GITHUB_ENV
+          # Set the current version as an environment variable
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_ENV
 
       - name: Find existing comment
         id: find_comment
@@ -69,7 +74,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `When merged, this PR will bump the version to: ${process.env.new_version}`
+              body: `The current version is ${process.env.current_version}, when merged, this PR will bump the version to: ${process.env.new_version}`
             })
 
       - name: Update PR Comment
@@ -82,7 +87,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               comment_id: steps.find_comment.outputs.id,
-              body: `When merged, this PR will bump the version to: ${process.env.new_version}`
+              body: `The current version is ${process.env.current_version}, when merged, this PR will bump the version to: ${process.env.new_version}`
             })
 
   bump-version:
