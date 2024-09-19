@@ -41,6 +41,10 @@ class ChatHandler:
                 self.cost_tracker.log_request(response)
 
                 try:
+                    parsed_response = parse_response(response)
+                    if parsed_response[0] is None:  # If parsing failed
+                        raise ValueError("Failed to parse JSON response")
+
                     (
                         text,
                         questions,
@@ -48,7 +52,7 @@ class ChatHandler:
                         code_version,
                         version_description,
                         requirements,
-                    ) = parse_response(response)
+                    ) = parsed_response
 
                     if (
                         code
