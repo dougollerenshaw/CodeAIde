@@ -37,6 +37,7 @@ jobs:
           # Perform the actual version bump
           cz bump --yes --increment PATCH
           # Debug: Print the contents of version.py
+          echo "Contents of version.py after bump:"
           cat version.py
           # Extract the new version from version.py
           NEW_VERSION=$(python -c "exec(open('version.py').read()); print(__version__)")
@@ -113,6 +114,9 @@ jobs:
         run: |
           # Perform the actual version bump
           cz bump --increment PATCH --yes
+          # Debug: Print the contents of version.py
+          echo "Contents of version.py after bump:"
+          cat version.py
           # Extract the new version from version.py
           NEW_VERSION=$(python -c "exec(open('version.py').read()); print(__version__)")
           echo "Extracted new version: $NEW_VERSION"
