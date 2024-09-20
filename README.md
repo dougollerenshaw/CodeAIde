@@ -94,6 +94,8 @@ The following features do not currently exist, but adding them in the future wou
 
 Contributions to CodeAIde are welcome! Please feel free to submit a Pull Request.
 
+For detailed instructions on how to build CodeAide as a standalone application, please refer to the [BUILD.md](BUILD.md) file in the root of this repository.
+
 ## License
 
 This project is licensed under the MIT License - see the license file for details.

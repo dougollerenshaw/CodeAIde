@@ -9,18 +9,28 @@ UTILS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def get_project_root():
     """Get the project root directory."""
-    # Always use UTILS_DIR as the starting point
     return os.path.abspath(os.path.join(UTILS_DIR, "..", ".."))
+
+
+def get_resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = get_project_root()
+    return os.path.join(base_path, relative_path)
 
 
 def get_examples_file_path():
     """Get the path to the examples.yaml file."""
-    return os.path.join(get_project_root(), "codeaide", "examples.yaml")
+    return get_resource_path("codeaide/examples.yaml")
 
 
 def load_examples():
     """Load and return all examples from the YAML file."""
     examples_file = get_examples_file_path()
+    print(f"Attempting to load examples from: {examples_file}")  # Debug print
     if not os.path.exists(examples_file):
         print(f"Examples file not found: {examples_file}")
         return []
@@ -28,7 +38,9 @@ def load_examples():
     try:
         with open(examples_file, "r", encoding="utf-8") as file:
             data = yaml.safe_load(file)
-        return data.get("examples", [])
+        examples = data.get("examples", [])
+        print(f"Loaded {len(examples)} examples")  # Debug print
+        return examples
     except yaml.YAMLError as e:
         print(f"YAML Error: {str(e)}")
         return []
