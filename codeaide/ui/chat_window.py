@@ -176,6 +176,7 @@ class ChatWindow(QMainWindow):
 
     def handle_response(self, response):
         self.enable_ui_elements()
+        self.remove_thinking_messages()
 
         if response["type"] == "message":
             self.add_to_chat("AI", response["message"])
