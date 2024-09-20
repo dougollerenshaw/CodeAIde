@@ -21,3 +21,18 @@ Thumbs.db
 # Dependency directories
 venv/
 env/
+
+# Ignore CodeAide.app directory
+CodeAide.app/
+
+# Ignore CodeAide.dmg file
+CodeAide.dmg
+
+# Ignore build directory
+build/
+
+# Ignore codeaide.spec file
+codeaide.spec
+
+# Ignore dist directory
+dist/
