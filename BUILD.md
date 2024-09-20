@@ -47,24 +47,26 @@ pip install PyQt5 pyinstaller
     ```
 
 3. Create an `Info.plist` file in `CodeAide.app/Contents/`:
-   <?xml version="1.0" encoding="UTF-8"?>
-   <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-   <plist version="1.0">
-   <dict>
-       <key>CFBundleExecutable</key>
-       <string>CodeAide</string>
-       <key>CFBundleIconFile</key>
-       <string>icon.icns</string>
-       <key>CFBundleIdentifier</key>
-       <string>com.yourcompany.codeaide</string>
-       <key>CFBundleName</key>
-       <string>CodeAide</string>
-       <key>CFBundlePackageType</key>
-       <string>APPL</string>
-       <key>CFBundleShortVersionString</key>
-       <string>1.0.0</string>
-   </dict>
-   </plist>
+    ```
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+    <plist version="1.0">
+    <dict>
+        <key>CFBundleExecutable</key>
+        <string>CodeAide</string>
+        <key>CFBundleIconFile</key>
+        <string>icon.icns</string>
+        <key>CFBundleIdentifier</key>
+        <string>com.yourcompany.codeaide</string>
+        <key>CFBundleName</key>
+        <string>CodeAide</string>
+        <key>CFBundlePackageType</key>
+        <string>APPL</string>
+        <key>CFBundleShortVersionString</key>
+        <string>1.0.0</string>
+    </dict>
+    </plist>
+   ```
 
 4. (Optional) Add an icon:
    - Create a .icns file for your app icon
