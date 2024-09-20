@@ -36,3 +36,6 @@ codeaide.spec
 
 # Ignore dist directory
 dist/
+
+# Ignore .dmg files
+*.dmg
