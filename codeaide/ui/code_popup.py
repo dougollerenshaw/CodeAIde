@@ -64,8 +64,8 @@ class CodeEditor(QPlainTextEdit):
 
     def line_number_area_width(self):
         digits = len(str(max(1, self.blockCount())))
-        space = 3 + self.fontMetrics().horizontalAdvance("9") * digits
-        return space
+        space = 3 + self.fontMetrics().horizontalAdvance("9") * (digits + 1)
+        return min(space, 50)  # Cap the width at 50 pixels
 
     def update_line_number_area_width(self, _):
         self.setViewportMargins(
