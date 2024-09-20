@@ -7,3 +7,4 @@ black
 isort
 pre-commit
 pyqt5
+pygments
