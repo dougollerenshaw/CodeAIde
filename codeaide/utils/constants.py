@@ -1,7 +1,29 @@
 # API Configuration
-MAX_TOKENS = 8192  # This is the maximum token limit for the API
-AI_MODEL = "claude-3-5-sonnet-20240620"
-MAX_RETRIES = 3  # Maximum number of retries for API requests (in case of errors or responses that can't be parsed)
+AI_PROVIDERS = {
+    "anthropic": {
+        "api_key_name": "ANTHROPIC_API_KEY",
+        "models": {
+            "claude-3-opus-20240229": {"max_tokens": 8192},
+            "claude-3-5-sonnet-20240620": {"max_tokens": 8192},
+            "claude-3-haiku-20240307": {"max_tokens": 4096},
+        },
+    },
+    "openai": {
+        "api_key_name": "OPENAI_API_KEY",
+        "models": {
+            "gpt-4": {"max_tokens": 8192},
+            "gpt-4-32k": {"max_tokens": 32768},
+            "gpt-3.5-turbo": {"max_tokens": 4096},
+        },
+    },
+}
+
+# Default model (we'll keep this for backwards compatibility)
+DEFAULT_MODEL = "claude-3-haiku-20240307"  # "claude-3-5-sonnet-20240620"
+DEFAULT_PROVIDER = "anthropic"
+
+# Other existing constants remain unchanged
+MAX_RETRIES = 3
 
 # UI Configuration
 CHAT_WINDOW_WIDTH = 800

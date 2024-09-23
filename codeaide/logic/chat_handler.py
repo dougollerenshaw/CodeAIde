@@ -10,7 +10,12 @@ from codeaide.utils.api_utils import (
     save_api_key,
     MissingAPIKeyException,
 )
-from codeaide.utils.constants import MAX_RETRIES, MAX_TOKENS
+from codeaide.utils.constants import (
+    MAX_RETRIES,
+    AI_PROVIDERS,
+    DEFAULT_MODEL,
+    DEFAULT_PROVIDER,
+)
 from codeaide.utils.cost_tracker import CostTracker
 from codeaide.utils.environment_manager import EnvironmentManager
 from codeaide.utils.file_handler import FileHandler
@@ -37,7 +42,8 @@ class ChatHandler:
         self.latest_version = "0.0"
         self.api_client = None
         self.api_key_set = False
-        self.current_service = "anthropic"  # Default service
+        self.current_provider = DEFAULT_PROVIDER
+        self.current_model = DEFAULT_MODEL
 
     def check_api_key(self):
         """
@@ -50,26 +56,26 @@ class ChatHandler:
             tuple: A tuple containing a boolean indicating if the API key is valid and a message.
         """
         if self.api_client is None:
-            self.api_client = get_api_client(self.current_service)
+            self.api_client = get_api_client(self.current_provider, self.current_model)
 
         if self.api_client:
             self.api_key_set = True
             return True, None
         else:
             self.api_key_set = False
-            return False, self.get_api_key_instructions(self.current_service)
+            return False, self.get_api_key_instructions(self.current_provider)
 
-    def get_api_key_instructions(self, service):
+    def get_api_key_instructions(self, provider):
         """
-        Get instructions for setting up the API key for a given service.
+        Get instructions for setting up the API key for a given provider.
 
         Args:
-            service (str): The name of the service.
+            provider (str): The name of the provider.
 
         Returns:
             str: Instructions for setting up the API key.
         """
-        if service == "anthropic":
+        if provider == "anthropic":
             return (
                 "It looks like you haven't set up your Anthropic API key yet. "
                 "Here's how to get started:\n\n"
@@ -83,7 +89,7 @@ class ChatHandler:
                 "Please paste your Anthropic API key now:"
             )
         else:
-            return f"Please enter your API key for {service.capitalize()}:"
+            return f"Please enter your API key for {provider.capitalize()}:"
 
     def validate_api_key(self, api_key):
         """
@@ -122,9 +128,11 @@ class ChatHandler:
         cleaned_key = api_key.strip().strip("'\"")  # Remove quotes and whitespace
         is_valid, error_message = self.validate_api_key(cleaned_key)
         if is_valid:
-            if save_api_key(self.current_service, cleaned_key):
+            if save_api_key(self.current_provider, cleaned_key):
                 # Try to get a new API client with the new key
-                self.api_client = get_api_client(self.current_service)
+                self.api_client = get_api_client(
+                    self.current_provider, self.current_model
+                )
                 if self.api_client:
                     self.api_key_set = True
                     return True, "API key saved and verified successfully."
@@ -155,7 +163,7 @@ class ChatHandler:
             if not self.check_and_set_api_key():
                 return {
                     "type": "api_key_required",
-                    "message": self.get_api_key_instructions(self.current_service),
+                    "message": self.get_api_key_instructions(self.current_provider),
                 }
 
             self.add_user_input_to_history(user_input)
@@ -174,6 +182,7 @@ class ChatHandler:
                 try:
                     return self.process_ai_response(response)
                 except ValueError as e:
+                    print(f"ValueError: {str(e)}\n")
                     if not self.is_last_attempt(attempt):
                         self.add_error_prompt_to_history(str(e))
                     else:
@@ -226,7 +235,10 @@ class ChatHandler:
         Returns:
             dict: The response from the AI API, or None if the request failed.
         """
-        return send_api_request(self.api_client, self.conversation_history, MAX_TOKENS)
+        max_tokens = AI_PROVIDERS[self.current_provider]["models"][self.current_model][
+            "max_tokens"
+        ]
+        return send_api_request(self.api_client, self.conversation_history, max_tokens)
 
     def is_last_attempt(self, attempt):
         """
