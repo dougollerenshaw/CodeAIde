@@ -2,10 +2,17 @@ import os
 import json
 import re
 import anthropic
-from anthropic import APIError
+import openai
 from decouple import config, AutoConfig
+import hjson
+from anthropic import APIError
 
-from codeaide.utils.constants import AI_MODEL, MAX_TOKENS, SYSTEM_PROMPT
+from codeaide.utils.constants import (
+    AI_PROVIDERS,
+    DEFAULT_MODEL,
+    DEFAULT_PROVIDER,
+    SYSTEM_PROMPT,
+)
 
 
 class MissingAPIKeyException(Exception):
@@ -16,24 +23,25 @@ class MissingAPIKeyException(Exception):
         )
 
 
-def get_api_client(service="anthropic"):
+def get_api_client(provider=DEFAULT_PROVIDER, model=DEFAULT_MODEL):
     try:
-        # Force a reload of the configuration
-        auto_config = AutoConfig(
-            search_path=os.path.dirname(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            )
-        )
-        api_key = auto_config(f"{service.upper()}_API_KEY", default=None)
-        if api_key is None or api_key.strip() == "":
-            return None  # Return None if API key is missing or empty
+        api_key_name = AI_PROVIDERS[provider]["api_key_name"]
+        api_key = config(api_key_name, default=None)
+        print(f"Attempting to get API key for {provider} with key name: {api_key_name}")
+        print(f"API key found: {'Yes' if api_key else 'No'}")
 
-        if service.lower() == "anthropic":
+        if api_key is None or api_key.strip() == "":
+            print(f"API key for {provider} is missing or empty")
+            return None
+
+        if provider.lower() == "anthropic":
             return anthropic.Anthropic(api_key=api_key)
+        elif provider.lower() == "openai":
+            return openai.OpenAI(api_key=api_key)
         else:
-            raise ValueError(f"Unsupported service: {service}")
+            raise ValueError(f"Unsupported provider: {provider}")
     except Exception as e:
-        print(f"Error initializing {service.capitalize()} API client: {str(e)}")
+        print(f"Error initializing {provider.capitalize()} API client: {str(e)}")
         return None
 
 
@@ -70,41 +78,84 @@ def save_api_key(service, api_key):
         return False
 
 
-def send_api_request(client, conversation_history, max_tokens=MAX_TOKENS):
-    system_prompt = SYSTEM_PROMPT
+def send_api_request(api_client, conversation_history, max_tokens, model, provider):
+    print(f"Sending API request with model: {model} and max_tokens: {max_tokens}")
+    print(f"Conversation history: {conversation_history}\n")
+
     try:
-        response = client.messages.create(
-            model=AI_MODEL,
-            max_tokens=max_tokens,
-            messages=conversation_history,
-            system=system_prompt,
-        )
-        if not response.content:
-            return None
+        if provider.lower() == "anthropic":
+            response = api_client.messages.create(
+                model=model,
+                max_tokens=max_tokens,
+                messages=conversation_history,
+                system=SYSTEM_PROMPT,
+            )
+            if not response.content:
+                return None
+        elif provider.lower() == "openai":
+            messages = [
+                {"role": "system", "content": SYSTEM_PROMPT}
+            ] + conversation_history
+            response = api_client.chat.completions.create(
+                model=model,
+                messages=messages,
+                max_tokens=max_tokens,
+            )
+            if not response.choices:
+                return None
+        else:
+            raise NotImplementedError(f"API request for {provider} not implemented")
+
+        print(f"Received response from {provider}")
+        print(f"Response object: {response}")
         return response
     except Exception as e:
-        print(f"Error in API request: {str(e)}")
+        print(f"Error in API request to {provider}: {str(e)}")
         return None
 
 
-def parse_response(response):
-    if not response or not response.content:
-        return None, None, None, None, None, None
+def parse_response(response, provider):
+    if not response:
+        raise ValueError("Empty or invalid response received")
+
+    print(f"Received response: {response}\n")
+
+    if provider.lower() == "anthropic":
+        if not response.content:
+            raise ValueError("Empty or invalid response received")
+        json_str = response.content[0].text
+    elif provider.lower() == "openai":
+        if not response.choices:
+            raise ValueError("Empty or invalid response received")
+        json_str = response.choices[0].message.content
+    else:
+        raise ValueError(f"Unsupported provider: {provider}")
+
+    # Remove the triple backticks and language identifier if present
+    if json_str.startswith("```json"):
+        json_str = json_str[7:-3].strip()
+    elif json_str.startswith("```"):
+        json_str = json_str[3:-3].strip()
 
     try:
-        content = json.loads(response.content[0].text)
+        # Parse the outer structure using hjson
+        outer_json = hjson.loads(json_str)
+    except hjson.HjsonDecodeError as e:
+        raise ValueError(
+            f"Failed to parse response: {str(e)}\nProblematic string: {json_str}"
+        )
 
-        text = content.get("text")
-        code = content.get("code")
-        code_version = content.get("code_version")
-        version_description = content.get("version_description")
-        requirements = content.get("requirements", [])
-        questions = content.get("questions", [])
+    if not isinstance(outer_json, dict):
+        raise ValueError("Parsed response is not a valid JSON object")
 
-        return text, questions, code, code_version, version_description, requirements
-    except json.JSONDecodeError:
-        print("Error: Received malformed JSON from the API")
-        return None, None, None, None, None, None
+    text = outer_json.get("text")
+    code = outer_json.get("code")
+    code_version = outer_json.get("code_version")
+    version_description = outer_json.get("version_description")
+    requirements = outer_json.get("requirements", [])
+    questions = outer_json.get("questions", [])
+
+    return text, questions, code, code_version, version_description, requirements
 
 
 def check_api_connection():
@@ -113,9 +164,9 @@ def check_api_connection():
         return False, "API key is missing or invalid"
     try:
         response = client.messages.create(
-            model=AI_MODEL,
+            model=DEFAULT_MODEL,
             max_tokens=100,
-            messages=[{"role": "user", "content": "Hi Claude, are we communicating?"}],
+            messages=[{"role": "user", "content": "Are we communicating?"}],
         )
         return True, response.content[0].text.strip()
     except Exception as e:

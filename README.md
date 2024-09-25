@@ -2,16 +2,20 @@
 
 CodeAIde is an AI-powered coding assistant that helps developers write, test, and optimize code through natural language interactions. By leveraging the power of large language models, CodeAIde aims to streamline the coding process and boost productivity.
 
+This is designed to be a simple, intuitive tool for writing, running, and refining simple Python scripts. It is not meant to be a full IDE or code editing environment and isn't a replacement for a tool like Cursor or Github Copilot. Instead, it is intended to be a simple tool for quickly writing code and getting it working without the need to worry about setting up environments, installing dependencies, etc.
+
 ## Features
 
 - Natural language code generation
+- Support for OpenAI and Anthropic APIs
 - Interactive clarification process for precise code output
+- Version control for generated code
 - Local code execution and testing
 - Cost tracking for API usage (not yet implemented)
 
 ## Examples
 
-Here are some example videos demonstrating use. Example prompts can be accessed by clicking "Use Example" and selecting from avaialable examples.
+Here are some example videos demonstrating use. Example prompts can be accessed by clicking "Use Example" and selecting from available examples.
 
 First, a simple matplotlib plot with followup requests to modify aesthetics.  
 

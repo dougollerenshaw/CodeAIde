@@ -15,8 +15,9 @@ from PyQt5.QtWidgets import (
     QTextEdit,
     QVBoxLayout,
     QWidget,
+    QComboBox,
+    QLabel,
 )
-
 from codeaide.ui.code_popup import CodePopup
 from codeaide.ui.example_selection_dialog import show_example_dialog
 from codeaide.utils import general_utils
@@ -31,6 +32,9 @@ from codeaide.utils.constants import (
     INITIAL_MESSAGE,
     USER_FONT,
     USER_MESSAGE_COLOR,
+    AI_PROVIDERS,
+    DEFAULT_PROVIDER,
+    DEFAULT_MODEL,
 )
 
 
@@ -61,6 +65,35 @@ class ChatWindow(QMainWindow):
         main_layout.setSpacing(5)
         main_layout.setContentsMargins(8, 8, 8, 8)
 
+        # Create a widget for the dropdowns
+        dropdown_widget = QWidget()
+        dropdown_layout = QHBoxLayout(dropdown_widget)
+        dropdown_layout.setContentsMargins(0, 0, 0, 0)
+        dropdown_layout.setSpacing(5)  # Minimal spacing between items
+
+        # Provider dropdown
+        self.provider_dropdown = QComboBox()
+        self.provider_dropdown.addItems(AI_PROVIDERS.keys())
+        self.provider_dropdown.setCurrentText(DEFAULT_PROVIDER)
+        self.provider_dropdown.currentTextChanged.connect(self.update_model_dropdown)
+        dropdown_layout.addWidget(QLabel("Provider:"))
+        dropdown_layout.addWidget(self.provider_dropdown)
+
+        # Model dropdown
+        self.model_dropdown = QComboBox()
+        self.update_model_dropdown(DEFAULT_PROVIDER)
+        self.model_dropdown.setCurrentText(DEFAULT_MODEL)
+        self.model_dropdown.currentTextChanged.connect(self.update_chat_handler)
+        dropdown_layout.addWidget(QLabel("Model:"))
+        dropdown_layout.addWidget(self.model_dropdown)
+
+        # Add stretch to push everything to the left
+        dropdown_layout.addStretch(1)
+
+        # Add the dropdown widget to the main layout
+        main_layout.addWidget(dropdown_widget)
+
+        # Chat display
         self.chat_display = QTextEdit(self)
         self.chat_display.setReadOnly(True)
         self.chat_display.setStyleSheet(
@@ -68,14 +101,10 @@ class ChatWindow(QMainWindow):
         )
         main_layout.addWidget(self.chat_display, stretch=3)
 
+        # Input text area
         self.input_text = QTextEdit(self)
         self.input_text.setStyleSheet(
-            f"""
-            background-color: {CHAT_WINDOW_BG};
-            color: {CHAT_WINDOW_FG};
-            border: 1px solid #ccc;
-            padding: 5px;
-        """
+            f"background-color: {CHAT_WINDOW_BG}; color: {CHAT_WINDOW_FG}; border: 1px solid #ccc; padding: 5px;"
         )
         self.input_text.setAcceptRichText(False)  # Add this line
         self.input_text.setFont(general_utils.set_font(USER_FONT))
@@ -84,18 +113,17 @@ class ChatWindow(QMainWindow):
         self.input_text.installEventFilter(self)
         main_layout.addWidget(self.input_text, stretch=1)
 
+        # Buttons
         button_layout = QHBoxLayout()
-        button_layout.setSpacing(5)
-
-        self.submit_button = QPushButton("Submit")
+        self.submit_button = QPushButton("Submit", self)
         self.submit_button.clicked.connect(self.on_submit)
         button_layout.addWidget(self.submit_button)
 
-        self.example_button = QPushButton("Use Example")
+        self.example_button = QPushButton("Load Example", self)
         self.example_button.clicked.connect(self.load_example)
         button_layout.addWidget(self.example_button)
 
-        self.exit_button = QPushButton("Exit")
+        self.exit_button = QPushButton("Exit", self)
         self.exit_button.clicked.connect(self.on_exit)
         button_layout.addWidget(self.exit_button)
 
@@ -263,3 +291,56 @@ class ChatWindow(QMainWindow):
 
     def sigint_handler(self, *args):
         QApplication.quit()
+
+    def update_model_dropdown(self, provider):
+        self.model_dropdown.clear()
+        models = AI_PROVIDERS[provider]["models"].keys()
+        self.model_dropdown.addItems(models)
+
+        # Set the current item to the first model in the list
+        if models:
+            self.model_dropdown.setCurrentText(list(models)[0])
+        else:
+            print(f"No models available for provider {provider}")
+
+    def update_chat_handler(self):
+        provider = self.provider_dropdown.currentText()
+        model = self.model_dropdown.currentText()
+
+        # Check if a valid model is selected
+        if not model:
+            print(f"No valid model selected for provider {provider}")
+            return
+
+        current_version = self.chat_handler.get_latest_version()
+        success = self.chat_handler.set_model(provider, model)
+        if not success:
+            self.add_to_chat(
+                "System",
+                f"Failed to set model {model} for provider {provider}. Please check your API key.",
+            )
+            return
+
+        self.chat_handler.clear_conversation_history()
+        self.chat_handler.set_latest_version(
+            current_version
+        )  # Maintain the version number
+
+        # Add a message about switching models and the current version
+        self.add_to_chat(
+            "System",
+            f"""
+{'='*50}
+Switched to {provider} - {model}
+Starting a new conversation with this model.
+Current code version: {current_version}
+Any new code will be versioned starting from {self.increment_version(current_version)}
+{'='*50}
+""",
+        )
+
+        self.check_api_key()
+
+    def increment_version(self, version):
+        major, minor = map(int, version.split("."))
+        return f"{major}.{minor + 1}"
