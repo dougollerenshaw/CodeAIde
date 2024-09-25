@@ -5,7 +5,7 @@ import anthropic
 import openai
 from decouple import config, AutoConfig
 import hjson
-from google.auth.exceptions import DefaultCredentialsError
+from anthropic import APIError
 
 from codeaide.utils.constants import (
     AI_PROVIDERS,
@@ -79,8 +79,6 @@ def save_api_key(service, api_key):
 
 
 def send_api_request(api_client, conversation_history, max_tokens, model, provider):
-    system_prompt = SYSTEM_PROMPT
-
     print(f"Sending API request with model: {model} and max_tokens: {max_tokens}")
     print(f"Conversation history: {conversation_history}\n")
 
@@ -90,17 +88,21 @@ def send_api_request(api_client, conversation_history, max_tokens, model, provid
                 model=model,
                 max_tokens=max_tokens,
                 messages=conversation_history,
-                system=system_prompt,
+                system=SYSTEM_PROMPT,
             )
+            if not response.content:
+                return None
         elif provider.lower() == "openai":
             messages = [
-                {"role": "system", "content": system_prompt}
+                {"role": "system", "content": SYSTEM_PROMPT}
             ] + conversation_history
             response = api_client.chat.completions.create(
                 model=model,
                 messages=messages,
                 max_tokens=max_tokens,
             )
+            if not response.choices:
+                return None
         else:
             raise NotImplementedError(f"API request for {provider} not implemented")
 
@@ -119,15 +121,21 @@ def parse_response(response, provider):
     print(f"Received response: {response}\n")
 
     if provider.lower() == "anthropic":
+        if not response.content:
+            raise ValueError("Empty or invalid response received")
         json_str = response.content[0].text
     elif provider.lower() == "openai":
+        if not response.choices:
+            raise ValueError("Empty or invalid response received")
         json_str = response.choices[0].message.content
     else:
         raise ValueError(f"Unsupported provider: {provider}")
 
-    # Remove the triple backticks and language identifier
+    # Remove the triple backticks and language identifier if present
     if json_str.startswith("```json"):
         json_str = json_str[7:-3].strip()
+    elif json_str.startswith("```"):
+        json_str = json_str[3:-3].strip()
 
     try:
         # Parse the outer structure using hjson
@@ -136,6 +144,9 @@ def parse_response(response, provider):
         raise ValueError(
             f"Failed to parse response: {str(e)}\nProblematic string: {json_str}"
         )
+
+    if not isinstance(outer_json, dict):
+        raise ValueError("Parsed response is not a valid JSON object")
 
     text = outer_json.get("text")
     code = outer_json.get("code")
