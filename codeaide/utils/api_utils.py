@@ -155,7 +155,7 @@ def check_api_connection():
         response = client.messages.create(
             model=DEFAULT_MODEL,
             max_tokens=100,
-            messages=[{"role": "user", "content": "Hi Claude, are we communicating?"}],
+            messages=[{"role": "user", "content": "Are we communicating?"}],
         )
         return True, response.content[0].text.strip()
     except Exception as e:
