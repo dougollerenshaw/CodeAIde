@@ -11,17 +11,16 @@ AI_PROVIDERS = {
     "openai": {
         "api_key_name": "OPENAI_API_KEY",
         "models": {
+            "gpt-3.5-turbo": {"max_tokens": 4096},
+            "gpt-4-turbo": {"max_tokens": 4096},
             "chatgpt-4o-latest": {"max_tokens": 16384},
             "gpt-4o-mini": {"max_tokens": 16384},
-            "o1-preview": {"max_tokens": 32768},
-            "gpt-4-turbo": {"max_tokens": 4096},
-            "gpt-3.5-turbo": {"max_tokens": 4096},
         },
     },
 }
 
-# Default model (we'll keep this for backwards compatibility)
-DEFAULT_MODEL = "claude-3-haiku-20240307"  # "claude-3-5-sonnet-20240620"
+# Default model
+DEFAULT_MODEL = "claude-3-5-sonnet-20240620"
 DEFAULT_PROVIDER = "anthropic"
 
 # Other existing constants remain unchanged
