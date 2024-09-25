@@ -27,7 +27,7 @@ https://github.com/user-attachments/assets/8aa729ff-c431-4a61-a9ef-d17050a27d02
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/CodeAIde.git
+   git clone https://github.com/dougollerenshaw/CodeAIde.git
    cd CodeAIde
    ```
 
