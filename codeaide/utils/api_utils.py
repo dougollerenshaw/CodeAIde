@@ -2,8 +2,10 @@ import os
 import json
 import re
 import anthropic
-from anthropic import APIError
+import openai
 from decouple import config, AutoConfig
+import hjson
+from google.auth.exceptions import DefaultCredentialsError
 
 from codeaide.utils.constants import (
     AI_PROVIDERS,
@@ -23,23 +25,19 @@ class MissingAPIKeyException(Exception):
 
 def get_api_client(provider=DEFAULT_PROVIDER, model=DEFAULT_MODEL):
     try:
-        # Force a reload of the configuration
-        auto_config = AutoConfig(
-            search_path=os.path.dirname(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            )
-        )
         api_key_name = AI_PROVIDERS[provider]["api_key_name"]
-        api_key = auto_config(api_key_name, default=None)
+        api_key = config(api_key_name, default=None)
+        print(f"Attempting to get API key for {provider} with key name: {api_key_name}")
+        print(f"API key found: {'Yes' if api_key else 'No'}")
+
         if api_key is None or api_key.strip() == "":
-            return None  # Return None if API key is missing or empty
+            print(f"API key for {provider} is missing or empty")
+            return None
 
         if provider.lower() == "anthropic":
             return anthropic.Anthropic(api_key=api_key)
         elif provider.lower() == "openai":
-            # You'll need to import the OpenAI client and implement this part
-            # For now, we'll just raise an error
-            raise NotImplementedError("OpenAI client not yet implemented")
+            return openai.OpenAI(api_key=api_key)
         else:
             raise ValueError(f"Unsupported provider: {provider}")
     except Exception as e:
@@ -80,50 +78,63 @@ def save_api_key(service, api_key):
         return False
 
 
-def send_api_request(api_client, conversation_history, max_tokens):
+def send_api_request(api_client, conversation_history, max_tokens, model, provider):
     system_prompt = SYSTEM_PROMPT
 
-    print(f"Sending API request with max_tokens: {max_tokens}")
+    print(f"Sending API request with model: {model} and max_tokens: {max_tokens}")
     print(f"Conversation history: {conversation_history}\n")
 
     try:
-        response = api_client.messages.create(
-            model=DEFAULT_MODEL,
-            max_tokens=max_tokens,
-            messages=conversation_history,
-            system=system_prompt,
-        )
-        if not response.content:
-            return None
+        if provider.lower() == "anthropic":
+            response = api_client.messages.create(
+                model=model,
+                max_tokens=max_tokens,
+                messages=conversation_history,
+                system=system_prompt,
+            )
+        elif provider.lower() == "openai":
+            messages = [
+                {"role": "system", "content": system_prompt}
+            ] + conversation_history
+            response = api_client.chat.completions.create(
+                model=model,
+                messages=messages,
+                max_tokens=max_tokens,
+            )
+        else:
+            raise NotImplementedError(f"API request for {provider} not implemented")
+
+        print(f"Received response from {provider}")
+        print(f"Response object: {response}")
         return response
     except Exception as e:
-        print(f"Error in API request: {str(e)}")
+        print(f"Error in API request to {provider}: {str(e)}")
         return None
 
 
-def parse_response(response):
-    if not response or not response.content:
+def parse_response(response, provider):
+    if not response:
         raise ValueError("Empty or invalid response received")
 
     print(f"Received response: {response}\n")
 
-    # Extract the JSON string
-    json_str = response.content[0].text
+    if provider.lower() == "anthropic":
+        json_str = response.content[0].text
+    elif provider.lower() == "openai":
+        json_str = response.choices[0].message.content
+    else:
+        raise ValueError(f"Unsupported provider: {provider}")
 
-    # Escape newlines within the "code" field
-    json_str = re.sub(
-        r'("code"\s*:\s*")(.+?)(")',
-        lambda m: m.group(1) + m.group(2).replace("\n", "\\n") + m.group(3),
-        json_str,
-        flags=re.DOTALL,
-    )
+    # Remove the triple backticks and language identifier
+    if json_str.startswith("```json"):
+        json_str = json_str[7:-3].strip()
 
     try:
-        # Parse the outer structure
-        outer_json = json.loads(json_str)
-    except json.JSONDecodeError as e:
+        # Parse the outer structure using hjson
+        outer_json = hjson.loads(json_str)
+    except hjson.HjsonDecodeError as e:
         raise ValueError(
-            f"Failed to parse JSON: {str(e)}\nProblematic JSON string: {json_str}"
+            f"Failed to parse response: {str(e)}\nProblematic string: {json_str}"
         )
 
     text = outer_json.get("text")

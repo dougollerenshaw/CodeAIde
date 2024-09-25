@@ -44,6 +44,9 @@ class ChatHandler:
         self.api_key_set = False
         self.current_provider = DEFAULT_PROVIDER
         self.current_model = DEFAULT_MODEL
+        self.max_tokens = AI_PROVIDERS[self.current_provider]["models"][
+            self.current_model
+        ]["max_tokens"]
 
     def check_api_key(self):
         """
@@ -235,10 +238,13 @@ class ChatHandler:
         Returns:
             dict: The response from the AI API, or None if the request failed.
         """
-        max_tokens = AI_PROVIDERS[self.current_provider]["models"][self.current_model][
-            "max_tokens"
-        ]
-        return send_api_request(self.api_client, self.conversation_history, max_tokens)
+        return send_api_request(
+            self.api_client,
+            self.conversation_history,
+            self.max_tokens,
+            self.current_model,
+            self.current_provider,
+        )
 
     def is_last_attempt(self, attempt):
         """
@@ -265,9 +271,13 @@ class ChatHandler:
         Raises:
             ValueError: If the response cannot be parsed or the version is invalid.
         """
-        parsed_response = parse_response(response)
-        if parsed_response[0] is None:
-            raise ValueError("Failed to parse JSON response")
+        try:
+            parsed_response = parse_response(response, provider=self.current_provider)
+        except (ValueError, json.JSONDecodeError) as e:
+            error_message = (
+                f"Failed to parse AI response: {str(e)}\nRaw response: {response}"
+            )
+            raise ValueError(error_message)
 
         (
             text,
@@ -304,9 +314,16 @@ class ChatHandler:
         Returns:
             None
         """
-        self.conversation_history.append(
-            {"role": "assistant", "content": response.content[0].text}
-        )
+        if self.current_provider.lower() == "anthropic":
+            self.conversation_history.append(
+                {"role": "assistant", "content": response.content[0].text}
+            )
+        elif self.current_provider.lower() == "openai":
+            self.conversation_history.append(
+                {"role": "assistant", "content": response.choices[0].message.content}
+            )
+        else:
+            raise ValueError(f"Unsupported provider: {provider}")
 
     def create_questions_response(self, text, questions):
         """
@@ -382,7 +399,7 @@ class ChatHandler:
         Returns:
             None
         """
-        error_prompt = f"\n\nThere was an error in your response: {error_message}. Please ensure you're using proper JSON formatting and incrementing the version number correctly. The latest version was {self.latest_version}, so the new version must be higher than this."
+        error_prompt = f"\n\nThere was an error in your last response: {error_message}. Please ensure you're using proper JSON formatting to avoid this error and others like it."
         self.conversation_history[-1]["content"] += error_prompt
 
     def handle_unexpected_error(self, e):
@@ -468,3 +485,30 @@ class ChatHandler:
             bool: True if there's an ongoing task, False otherwise.
         """
         return bool(self.conversation_history)
+
+    def set_model(self, provider, model):
+        if provider not in AI_PROVIDERS:
+            print(f"Invalid provider: {provider}")
+            return False
+        if model not in AI_PROVIDERS[provider]["models"]:
+            print(f"Invalid model {model} for provider {provider}")
+            return False
+
+        self.current_provider = provider
+        self.current_model = model
+        self.max_tokens = AI_PROVIDERS[self.current_provider]["models"][
+            self.current_model
+        ]["max_tokens"]
+        self.api_client = get_api_client(self.current_provider, self.current_model)
+        self.api_key_set = self.api_client is not None
+        return self.api_key_set
+
+    def clear_conversation_history(self):
+        self.conversation_history = []
+        # We maintain the latest version across model changes
+
+    def get_latest_version(self):
+        return self.latest_version
+
+    def set_latest_version(self, version):
+        self.latest_version = version

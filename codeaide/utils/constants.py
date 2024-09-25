@@ -3,7 +3,7 @@ AI_PROVIDERS = {
     "anthropic": {
         "api_key_name": "ANTHROPIC_API_KEY",
         "models": {
-            "claude-3-opus-20240229": {"max_tokens": 8192},
+            "claude-3-opus-20240229": {"max_tokens": 4096},
             "claude-3-5-sonnet-20240620": {"max_tokens": 8192},
             "claude-3-haiku-20240307": {"max_tokens": 4096},
         },
@@ -11,8 +11,10 @@ AI_PROVIDERS = {
     "openai": {
         "api_key_name": "OPENAI_API_KEY",
         "models": {
-            "gpt-4": {"max_tokens": 8192},
-            "gpt-4-32k": {"max_tokens": 32768},
+            "chatgpt-4o-latest": {"max_tokens": 16384},
+            "gpt-4o-mini": {"max_tokens": 16384},
+            "o1-preview": {"max_tokens": 32768},
+            "gpt-4-turbo": {"max_tokens": 4096},
             "gpt-3.5-turbo": {"max_tokens": 4096},
         },
     },
