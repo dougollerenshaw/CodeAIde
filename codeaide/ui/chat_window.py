@@ -152,7 +152,15 @@ class ChatWindow(QMainWindow):
             return
 
         if self.waiting_for_api_key:
-            self.handle_api_key_input(user_input)
+            (
+                success,
+                message,
+                self.waiting_for_api_key,
+            ) = self.chat_handler.handle_api_key_input(user_input)
+            self.remove_thinking_messages()
+            self.add_to_chat("AI", message)
+            if success:
+                self.enable_ui_elements()
         else:
             self.process_input(user_input)
 
@@ -174,11 +182,8 @@ class ChatWindow(QMainWindow):
 
     def process_input(self, user_input):
         try:
-            if self.waiting_for_api_key:
-                self.handle_api_key_input(user_input)
-            else:
-                response = self.chat_handler.process_input(user_input)
-                self.handle_response(response)
+            response = self.chat_handler.process_input(user_input)
+            self.handle_response(response)
         except Exception as e:
             error_message = f"An unexpected error occurred: {str(e)}. Please check the console window for the full traceback."
             self.add_to_chat("AI", error_message)
@@ -186,19 +191,6 @@ class ChatWindow(QMainWindow):
             traceback.print_exc()
         finally:
             self.enable_ui_elements()
-
-    def handle_api_key_input(self, api_key):
-        success, message = self.chat_handler.handle_api_key_input(api_key)
-        self.remove_thinking_messages()
-        if success:
-            self.waiting_for_api_key = False
-            self.add_to_chat(
-                "AI",
-                "Great! Your API key has been saved. What would you like to work on?",
-            )
-        else:
-            self.add_to_chat("AI", message)
-        self.enable_ui_elements()
 
     def handle_response(self, response):
         self.enable_ui_elements()

@@ -134,17 +134,25 @@ class ChatHandler:
             api_key (str): The API key entered by the user.
 
         Returns:
-            tuple: A tuple containing a boolean indicating success and a message.
+            tuple: A tuple containing a boolean indicating success, a message, and a boolean indicating if waiting for API key.
         """
         if save_api_key(self.current_provider, api_key):
             self.api_client = get_api_client(self.current_provider, self.current_model)
             self.api_key_set = self.api_client is not None
             if self.api_key_set:
-                return True, "API key saved successfully."
+                return (
+                    True,
+                    "Great! Your API key has been saved. What would you like to work on?",
+                    False,
+                )
             else:
-                return False, "Failed to initialize API client with the provided key."
+                return (
+                    False,
+                    "Failed to initialize API client with the provided key.",
+                    True,
+                )
         else:
-            return False, "Failed to save the API key."
+            return False, "Failed to save the API key.", True
 
     def process_input(self, user_input):
         """
