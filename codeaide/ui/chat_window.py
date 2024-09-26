@@ -48,8 +48,13 @@ class ChatWindow(QMainWindow):
         self.code_popup = None
         self.waiting_for_api_key = False
         self.setup_ui()
-        self.add_to_chat("AI", INITIAL_MESSAGE)
-        self.check_api_key()
+
+        # Check API key status
+        if not self.chat_handler.api_key_valid:
+            self.waiting_for_api_key = True
+            self.add_to_chat("AI", self.chat_handler.api_key_message)
+        else:
+            self.add_to_chat("AI", INITIAL_MESSAGE)
 
         self.input_text.setTextColor(QColor(CHAT_WINDOW_FG))
 
@@ -143,14 +148,15 @@ class ChatWindow(QMainWindow):
 
     def on_submit(self):
         user_input = self.input_text.toPlainText().strip()
-        if user_input:
-            self.add_to_chat("User", user_input)
-            self.input_text.clear()
-            self.display_thinking()
-            self.disable_ui_elements()
-            QTimer.singleShot(100, lambda: self.process_input(user_input))
+        if not user_input:
+            return
+
+        if self.waiting_for_api_key:
+            self.handle_api_key_input(user_input)
         else:
-            print("ChatWindow: Empty input, not submitting")
+            self.process_input(user_input)
+
+        self.input_text.clear()
 
     def on_modify(self):
         self.input_text.ensureCursorVisible()
@@ -180,14 +186,6 @@ class ChatWindow(QMainWindow):
             traceback.print_exc()
         finally:
             self.enable_ui_elements()
-
-    def check_api_key(self):
-        api_key_valid, message = self.chat_handler.check_api_key()
-        if not api_key_valid:
-            self.add_to_chat("AI", message)
-            self.waiting_for_api_key = True
-        else:
-            self.waiting_for_api_key = False
 
     def handle_api_key_input(self, api_key):
         success, message = self.chat_handler.handle_api_key_input(api_key)
@@ -313,12 +311,17 @@ class ChatWindow(QMainWindow):
             return
 
         current_version = self.chat_handler.get_latest_version()
-        success = self.chat_handler.set_model(provider, model)
+        success, message = self.chat_handler.set_model(provider, model)
+
         if not success:
-            self.add_to_chat(
-                "System",
-                f"Failed to set model {model} for provider {provider}. Please check your API key.",
-            )
+            if message:  # This indicates that an API key is required
+                self.waiting_for_api_key = True
+                self.add_to_chat("AI", message)
+            else:
+                self.add_to_chat(
+                    "System",
+                    f"Failed to set model {model} for provider {provider}. Please check your API key.",
+                )
             return
 
         self.chat_handler.clear_conversation_history()
@@ -338,8 +341,6 @@ Any new code will be versioned starting from {self.increment_version(current_ver
 {'='*50}
 """,
         )
-
-        self.check_api_key()
 
     def increment_version(self, version):
         major, minor = map(int, version.split("."))

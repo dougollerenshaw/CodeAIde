@@ -25,6 +25,13 @@ class MissingAPIKeyException(Exception):
 
 def get_api_client(provider=DEFAULT_PROVIDER, model=DEFAULT_MODEL):
     try:
+        root_dir = os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        )
+
+        # Use AutoConfig to automatically find and load the .env file in the project root
+        config = AutoConfig(search_path=root_dir)
+
         api_key_name = AI_PROVIDERS[provider]["api_key_name"]
         api_key = config(api_key_name, default=None)
         print(f"Attempting to get API key for {provider} with key name: {api_key_name}")

@@ -3,9 +3,9 @@ AI_PROVIDERS = {
     "anthropic": {
         "api_key_name": "ANTHROPIC_API_KEY",
         "models": {
-            "claude-3-opus-20240229": {"max_tokens": 4096},
             "claude-3-5-sonnet-20240620": {"max_tokens": 8192},
             "claude-3-haiku-20240307": {"max_tokens": 4096},
+            "claude-3-opus-20240229": {"max_tokens": 4096},
         },
     },
     "openai": {
@@ -20,8 +20,10 @@ AI_PROVIDERS = {
 }
 
 # Default model
-DEFAULT_MODEL = "claude-3-5-sonnet-20240620"
-DEFAULT_PROVIDER = "anthropic"
+# DEFAULT_MODEL = "claude-3-5-sonnet-20240620"
+# DEFAULT_PROVIDER = "anthropic"
+DEFAULT_MODEL = "gpt-3.5-turbo"
+DEFAULT_PROVIDER = "openai"
 
 # Other existing constants remain unchanged
 MAX_RETRIES = 3
