@@ -28,4 +28,4 @@ jobs:
       env:
         ANTHROPIC_API_KEY: dummy_key_for_testing
       run: |
-        pytest -v
+        pytest -vv -s
