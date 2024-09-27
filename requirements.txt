@@ -5,6 +5,7 @@ openai
 hjson
 pyyaml
 pytest
+pytest-qt
 black
 isort
 pre-commit

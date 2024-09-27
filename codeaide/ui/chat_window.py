@@ -35,6 +35,7 @@ from codeaide.utils.constants import (
     AI_PROVIDERS,
     DEFAULT_PROVIDER,
     DEFAULT_MODEL,
+    MODEL_SWITCH_MESSAGE,
 )
 
 
@@ -44,7 +45,7 @@ class ChatWindow(QMainWindow):
         self.setWindowTitle("🤖 CodeAIde 🤖")
         self.setGeometry(0, 0, CHAT_WINDOW_WIDTH, CHAT_WINDOW_HEIGHT)
         self.chat_handler = chat_handler
-        self.cost_tracker = chat_handler.cost_tracker
+        self.cost_tracker = getattr(chat_handler, "cost_tracker", None)
         self.code_popup = None
         self.waiting_for_api_key = False
         self.setup_ui()
@@ -87,7 +88,6 @@ class ChatWindow(QMainWindow):
         # Model dropdown
         self.model_dropdown = QComboBox()
         self.update_model_dropdown(DEFAULT_PROVIDER)
-        self.model_dropdown.setCurrentText(DEFAULT_MODEL)
         self.model_dropdown.currentTextChanged.connect(self.update_chat_handler)
         dropdown_layout.addWidget(QLabel("Model:"))
         dropdown_layout.addWidget(self.model_dropdown)
@@ -297,19 +297,23 @@ class ChatWindow(QMainWindow):
         provider = self.provider_dropdown.currentText()
         model = self.model_dropdown.currentText()
 
-        # Check if a valid model is selected
-        if not model:
-            print(f"No valid model selected for provider {provider}")
-            return
+        if not provider or not model:
+            return  # Exit early if either provider or model is not set
 
         current_version = self.chat_handler.get_latest_version()
         success, message = self.chat_handler.set_model(provider, model)
 
+        print(f"In update_chat_handler: current_version: {current_version}")
+        print(f"In update_chat_handler, success: {success}")
+        print(f"In update_chat_handler, message: {message}")
+
         if not success:
+            print(f"In update_chat_handler, not success")
             if message:  # This indicates that an API key is required
                 self.waiting_for_api_key = True
                 self.add_to_chat("AI", message)
             else:
+                print(f"In update_chat_handler, not success, no message")
                 self.add_to_chat(
                     "System",
                     f"Failed to set model {model} for provider {provider}. Please check your API key.",
@@ -321,15 +325,16 @@ class ChatWindow(QMainWindow):
             current_version
         )  # Maintain the version number
 
-        # Add a message about switching models and the current version
-        self.add_to_chat(
-            "System",
-            f"""
-{'='*50}
-Switched to {provider} - {model}
-Starting a new conversation with this model.
-Current code version: {current_version}
-Any new code will be versioned starting from {self.increment_version(current_version)}
-{'='*50}
-""",
+        new_version = general_utils.increment_version(
+            current_version, major_or_minor="major", increment=1
         )
+
+        # Use the constant with format
+        switch_message = MODEL_SWITCH_MESSAGE.format(
+            provider=provider,
+            model=model,
+            current_version=current_version,
+            new_version=new_version,
+        )
+
+        self.add_to_chat("System", switch_message)
