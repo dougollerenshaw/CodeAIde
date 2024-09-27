@@ -48,25 +48,21 @@ class ChatHandler:
             self.current_model
         ]["max_tokens"]
 
+        self.api_key_valid, self.api_key_message = self.check_api_key()
+
     def check_api_key(self):
         """
         Check if the API key is set and valid.
 
-        Args:
-            None
-
         Returns:
             tuple: A tuple containing a boolean indicating if the API key is valid and a message.
         """
-        if self.api_client is None:
-            self.api_client = get_api_client(self.current_provider, self.current_model)
+        self.api_client = get_api_client(self.current_provider, self.current_model)
+        self.api_key_set = self.api_client is not None
 
-        if self.api_client:
-            self.api_key_set = True
-            return True, None
-        else:
-            self.api_key_set = False
+        if not self.api_key_set:
             return False, self.get_api_key_instructions(self.current_provider)
+        return True, None
 
     def get_api_key_instructions(self, provider):
         """
@@ -90,6 +86,18 @@ class ChatHandler:
                 "Once you've pasted your API key, I'll save it securely in a .env file in the root of your project. "
                 "This file is already in .gitignore, so it won't be shared if you push your code to a repository.\n\n"
                 "Please paste your Anthropic API key now:"
+            )
+        elif provider == "openai":
+            return (
+                "It looks like you haven't set up your OpenAI API key yet. "
+                "Here's how to get started:\n\n"
+                "1. Go to https://platform.openai.com/api-keys and sign in to your OpenAI account or create an account if you don't have one.\n"
+                "2. Generate a new API key.\n"
+                "3. Add some funds to your account to cover the cost of using the API (start with as little as $1).\n"
+                "4. Copy the API key and paste it here.\n\n"
+                "Once you've pasted your API key, I'll save it securely in a .env file in the root of your project. "
+                "This file is already in .gitignore, so it won't be shared if you push your code to a repository.\n\n"
+                "Please paste your OpenAI API key now:"
             )
         else:
             return f"Please enter your API key for {provider.capitalize()}:"
@@ -120,37 +128,31 @@ class ChatHandler:
 
     def handle_api_key_input(self, api_key):
         """
-        Handle the input of the API key.
+        Handle the API key input from the user.
 
         Args:
             api_key (str): The API key entered by the user.
 
         Returns:
-            tuple: A tuple containing a boolean indicating if the API key was saved successfully and a message.
+            tuple: A tuple containing a boolean indicating success, a message, and a boolean indicating if waiting for API key.
         """
-        cleaned_key = api_key.strip().strip("'\"")  # Remove quotes and whitespace
-        is_valid, error_message = self.validate_api_key(cleaned_key)
-        if is_valid:
-            if save_api_key(self.current_provider, cleaned_key):
-                # Try to get a new API client with the new key
-                self.api_client = get_api_client(
-                    self.current_provider, self.current_model
+        if save_api_key(self.current_provider, api_key):
+            self.api_client = get_api_client(self.current_provider, self.current_model)
+            self.api_key_set = self.api_client is not None
+            if self.api_key_set:
+                return (
+                    True,
+                    "Great! Your API key has been saved. What would you like to work on?",
+                    False,
                 )
-                if self.api_client:
-                    self.api_key_set = True
-                    return True, "API key saved and verified successfully."
-                else:
-                    return (
-                        False,
-                        "API key saved, but verification failed. Please check your key and try again.",
-                    )
             else:
                 return (
                     False,
-                    "Failed to save the API key. Please check your permissions and try again.",
+                    "Failed to initialize API client with the provided key.",
+                    True,
                 )
         else:
-            return False, f"Invalid API key format: {error_message}. Please try again."
+            return False, "Failed to save the API key.", True
 
     def process_input(self, user_input):
         """
@@ -162,8 +164,9 @@ class ChatHandler:
         Returns:
             dict: A response dictionary containing the type and content of the response.
         """
+        print(f"Processing input: {user_input}")
         try:
-            if not self.check_and_set_api_key():
+            if not self.api_key_set:
                 return {
                     "type": "api_key_required",
                     "message": self.get_api_key_instructions(self.current_provider),
@@ -199,19 +202,6 @@ class ChatHandler:
 
         except Exception as e:
             return self.handle_unexpected_error(e)
-
-    def check_and_set_api_key(self):
-        """
-        Check if the API key is set and valid.
-
-        Args:
-            None
-
-        Returns:
-            bool: True if the API key is valid, False otherwise.
-        """
-        api_key_valid, _ = self.check_api_key()
-        return api_key_valid
 
     def add_user_input_to_history(self, user_input):
         """
@@ -399,7 +389,7 @@ class ChatHandler:
         Returns:
             None
         """
-        error_prompt = f"\n\nThere was an error in your last response: {error_message}. Please ensure you're using proper JSON formatting to avoid this error and others like it."
+        error_prompt = f"\n\nThere was an error in your last response: {error_message}. Please ensure you're using proper JSON formatting to avoid this error and others like it. Please don't apologize for the error because it will be hidden from the end user."
         self.conversation_history[-1]["content"] += error_prompt
 
     def handle_unexpected_error(self, e):
@@ -489,19 +479,24 @@ class ChatHandler:
     def set_model(self, provider, model):
         if provider not in AI_PROVIDERS:
             print(f"Invalid provider: {provider}")
-            return False
+            return False, None
         if model not in AI_PROVIDERS[provider]["models"]:
             print(f"Invalid model {model} for provider {provider}")
-            return False
+            return False, None
 
         self.current_provider = provider
         self.current_model = model
         self.max_tokens = AI_PROVIDERS[self.current_provider]["models"][
             self.current_model
         ]["max_tokens"]
-        self.api_client = get_api_client(self.current_provider, self.current_model)
-        self.api_key_set = self.api_client is not None
-        return self.api_key_set
+
+        # Check API key when setting a new model
+        api_key_valid, message = self.check_api_key()
+        if not api_key_valid:
+            return False, message
+
+        print(f"Model {model} for provider {provider} set successfully.")
+        return True, None
 
     def clear_conversation_history(self):
         self.conversation_history = []
