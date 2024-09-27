@@ -1,7 +1,7 @@
 import signal
 import sys
 import traceback
-
+import time
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
@@ -151,6 +151,9 @@ class ChatWindow(QMainWindow):
         if not user_input:
             return
 
+        # Clear the input field immediately
+        self.input_text.clear()
+
         if self.waiting_for_api_key:
             (
                 success,
@@ -162,9 +165,18 @@ class ChatWindow(QMainWindow):
             if success:
                 self.enable_ui_elements()
         else:
-            self.process_input(user_input)
+            # Immediately display user input and "Thinking..." message
+            self.add_to_chat("User", user_input)
+            self.disable_ui_elements()
+            self.add_to_chat("AI", "Thinking... 🤔")
 
-        self.input_text.clear()
+            # Use QTimer to process the input after the UI has updated
+            QTimer.singleShot(100, lambda: self.call_process_input_async(user_input))
+
+    def call_process_input_async(self, user_input):
+        # Process the input
+        response = self.chat_handler.process_input(user_input)
+        self.handle_response(response)
 
     def on_modify(self):
         self.input_text.ensureCursorVisible()
@@ -179,18 +191,6 @@ class ChatWindow(QMainWindow):
 
     def display_thinking(self):
         self.add_to_chat("AI", "Thinking... 🤔")
-
-    def process_input(self, user_input):
-        try:
-            response = self.chat_handler.process_input(user_input)
-            self.handle_response(response)
-        except Exception as e:
-            error_message = f"An unexpected error occurred: {str(e)}. Please check the console window for the full traceback."
-            self.add_to_chat("AI", error_message)
-            print("Unexpected error in ChatWindow process_input:", file=sys.stderr)
-            traceback.print_exc()
-        finally:
-            self.enable_ui_elements()
 
     def handle_response(self, response):
         self.enable_ui_elements()
@@ -333,7 +333,3 @@ Any new code will be versioned starting from {self.increment_version(current_ver
 {'='*50}
 """,
         )
-
-    def increment_version(self, version):
-        major, minor = map(int, version.split("."))
-        return f"{major}.{minor + 1}"

@@ -389,7 +389,7 @@ class ChatHandler:
         Returns:
             None
         """
-        error_prompt = f"\n\nThere was an error in your last response: {error_message}. Please ensure you're using proper JSON formatting to avoid this error and others like it."
+        error_prompt = f"\n\nThere was an error in your last response: {error_message}. Please ensure you're using proper JSON formatting to avoid this error and others like it. Please don't apologize for the error because it will be hidden from the end user."
         self.conversation_history[-1]["content"] += error_prompt
 
     def handle_unexpected_error(self, e):
