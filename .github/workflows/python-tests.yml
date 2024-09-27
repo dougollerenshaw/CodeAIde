@@ -25,7 +25,7 @@ jobs:
         pip install pytest pytest-mock
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Run tests
-      env:
-        ANTHROPIC_API_KEY: dummy_key_for_testing
       run: |
-        pytest -vv -s
+        for test in $(pytest --collect-only -q); do
+          pytest -vv -s $test
+        done
