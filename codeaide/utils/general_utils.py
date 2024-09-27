@@ -98,3 +98,11 @@ def format_chat_message(sender, message, font, color):
     """
 
     return html_message
+
+
+def increment_version(version, increment=1, major_or_minor="minor"):
+    major, minor = map(int, version.split("."))
+    if major_or_minor == "major":
+        return f"{major + increment}.{minor}"
+    else:
+        return f"{major}.{minor + increment}"

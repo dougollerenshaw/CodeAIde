@@ -477,6 +477,7 @@ class ChatHandler:
         return bool(self.conversation_history)
 
     def set_model(self, provider, model):
+        print(f"In set_model: provider: {provider}, model: {model}")
         if provider not in AI_PROVIDERS:
             print(f"Invalid provider: {provider}")
             return False, None
@@ -499,8 +500,16 @@ class ChatHandler:
         return True, None
 
     def clear_conversation_history(self):
+        """
+        Clear the conversation history.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         self.conversation_history = []
-        # We maintain the latest version across model changes
 
     def get_latest_version(self):
         return self.latest_version

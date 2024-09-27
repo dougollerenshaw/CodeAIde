@@ -49,6 +49,16 @@ CODE_WINDOW_BG = "black"
 CODE_WINDOW_FG = "white"
 CODE_FONT = ("Courier", 14, "normal")
 
+# Message displayed when the model is switched
+MODEL_SWITCH_MESSAGE = """
+==================================================
+Switched to {provider} - {model}
+Starting a new conversation with this model.
+Current code version: {current_version}
+Any new code will be versioned starting from {new_version}
+==================================================
+"""
+
 # System prompt for API requests
 SYSTEM_PROMPT = """
 You are an AI assistant specialized in providing coding advice and solutions. Your primary goal is to offer practical, working code examples while balancing the need for clarification with the ability to make reasonable assumptions. Follow these guidelines:
