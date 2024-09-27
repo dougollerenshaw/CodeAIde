@@ -26,6 +26,7 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Run tests
       run: |
+        set -e
         for test in $(pytest --collect-only -q); do
-          pytest -vv -s $test
+          pytest -vv -s $test || exit 1
         done
