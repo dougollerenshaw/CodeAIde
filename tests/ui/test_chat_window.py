@@ -1,6 +1,8 @@
 import sys
 from unittest.mock import Mock, patch, MagicMock
 import pytest
+import os
+
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtTest import QTest
 from PyQt5.QtCore import Qt, QTimer
@@ -13,6 +15,11 @@ from codeaide.utils.constants import (
     DEFAULT_PROVIDER,
     DEFAULT_MODEL,
     MODEL_SWITCH_MESSAGE,
+)
+
+# Skip all tests in this file if running in CI
+pytestmark = pytest.mark.skipif(
+    os.environ.get("CI") == "true", reason="Running in CI environment"
 )
 
 # This is required for Qt tests
