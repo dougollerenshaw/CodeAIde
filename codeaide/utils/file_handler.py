@@ -1,5 +1,6 @@
 import os
 import shutil
+import json
 
 
 class FileHandler:
@@ -16,6 +17,11 @@ class FileHandler:
             os.path.join(self.output_dir, self.session_id) if self.session_id else None
         )
         self.versions_dict = {}
+        self.chat_history_file = (
+            os.path.join(self.session_dir, "chat_history.json")
+            if self.session_dir
+            else None
+        )
         self._ensure_output_dirs_exist()
 
     def _ensure_output_dirs_exist(self):
@@ -81,7 +87,30 @@ class FileHandler:
         with open(file_path, "r") as file:
             return file.read().splitlines()
 
+    def save_chat_history(self, conversation_history):
+        if not self.session_dir:
+            raise ValueError("Session directory not set. Cannot save chat history.")
+
+        try:
+            with open(self.chat_history_file, "w", encoding="utf-8") as f:
+                json.dump(conversation_history, f, ensure_ascii=False, indent=2)
+            print(f"Chat history saved successfully to: {self.chat_history_file}")
+        except Exception as e:
+            print(f"Error saving chat history: {str(e)}")
+
+    def load_chat_history(self):
+        if not self.session_dir or not os.path.exists(self.chat_history_file):
+            return []
+
+        try:
+            with open(self.chat_history_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading chat history: {str(e)}")
+            return []
+
     def set_session_id(self, session_id):
         self.session_id = session_id
         self.session_dir = os.path.join(self.output_dir, self.session_id)
+        self.chat_history_file = os.path.join(self.session_dir, "chat_history.json")
         self._ensure_output_dirs_exist()
