@@ -24,6 +24,11 @@ class FileHandler:
             if self.session_dir
             else None
         )
+        self.chat_window_log_file = (
+            os.path.join(self.session_dir, "chat_window_log.json")
+            if self.session_dir
+            else None
+        )
         self._ensure_output_dirs_exist()
 
         if self.session_dir:
@@ -117,6 +122,30 @@ class FileHandler:
             self.logger.error(f"Error loading chat history: {str(e)}")
             return []
 
+    def save_chat_contents(self, chat_contents):
+        if not self.session_dir:
+            self.logger.error("Session directory not set. Cannot save chat contents.")
+            return
+
+        try:
+            with open(self.chat_window_log_file, "w", encoding="utf-8") as f:
+                json.dump(chat_contents, f, ensure_ascii=False, indent=2)
+            self.logger.info(f"Chat contents saved to {self.chat_window_log_file}")
+        except Exception as e:
+            self.logger.error(f"Error saving chat contents: {str(e)}")
+
+    def load_chat_contents(self):
+        if not os.path.exists(self.chat_window_log_file):
+            self.logger.info(f"No chat log file found at {self.chat_window_log_file}")
+            return []
+
+        try:
+            with open(self.chat_window_log_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            self.logger.error(f"Error loading chat contents: {str(e)}")
+            return []
+
     def set_session_id(self, session_id):
         self.session_id = session_id
         self.session_dir = os.path.join(self.output_dir, self.session_id)
@@ -124,3 +153,25 @@ class FileHandler:
         self._ensure_output_dirs_exist()
         setup_logger(self.session_dir)
         self.logger = get_logger()
+
+    def copy_log_to_new_session(self, new_session_id):
+        new_session_dir = os.path.join(self.output_dir, new_session_id)
+        os.makedirs(new_session_dir, exist_ok=True)
+
+        old_log_file = os.path.join(self.session_dir, "codeaide.log")
+        new_log_file = os.path.join(new_session_dir, "codeaide.log")
+
+        os.makedirs(os.path.dirname(new_log_file), exist_ok=True)
+
+        if os.path.exists(old_log_file):
+            shutil.copy2(old_log_file, new_log_file)
+
+            # Append a message to the old log file
+            with open(old_log_file, "a") as f:
+                f.write("\nNew session created. Log continued in new file.\n")
+
+            self.logger.info(f"Copied log file to new session: {new_session_id}")
+        else:
+            self.logger.warning(
+                f"No existing log file found to copy for new session: {new_session_id}"
+            )

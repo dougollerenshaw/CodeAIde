@@ -51,6 +51,7 @@ class ChatWindow(QMainWindow):
         self.cost_tracker = getattr(chat_handler, "cost_tracker", None)
         self.code_popup = None
         self.waiting_for_api_key = False
+        self.chat_contents = []
         self.setup_ui()
 
         # Check API key status
@@ -133,6 +134,10 @@ class ChatWindow(QMainWindow):
         self.example_button.clicked.connect(self.load_example)
         button_layout.addWidget(self.example_button)
 
+        self.new_session_button = QPushButton("New Session")
+        self.new_session_button.clicked.connect(self.on_new_session_clicked)
+        button_layout.addWidget(self.new_session_button)
+
         self.exit_button = QPushButton("Exit", self)
         self.exit_button.clicked.connect(self.on_exit)
         button_layout.addWidget(self.exit_button)
@@ -198,7 +203,15 @@ class ChatWindow(QMainWindow):
         self.chat_display.append(html_message + "<br>")
         self.chat_display.ensureCursorVisible()
 
-        self.logger.debug(f"Adding message to chat from {sender}: {message}")
+        self.logger.debug(
+            f"Adding message to chat from {sender}: {message}"
+        )  # Log first 50 chars
+
+        # Add message to chat contents
+        self.chat_contents.append({"sender": sender, "message": message})
+
+        # Save chat contents
+        self.chat_handler.file_handler.save_chat_contents(self.chat_contents)
 
     def display_thinking(self):
         self.add_to_chat("AI", "Thinking... 🤔")
@@ -344,3 +357,37 @@ class ChatWindow(QMainWindow):
         )
 
         self.add_to_chat("System", switch_message)
+
+    def on_new_session_clicked(self):
+        self.logger.info("User clicked New Session button")
+        reply = QMessageBox.question(
+            self,
+            "New Session",
+            "This will start a new session with a new chat history. Are you sure you'd like to proceed?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+
+        if reply == QMessageBox.Yes:
+            self.logger.info("User confirmed starting a new session")
+            self.chat_handler.start_new_session(self)
+        else:
+            self.logger.info("User cancelled starting a new session")
+
+    def clear_chat_display(self):
+        self.chat_display.clear()
+        self.chat_contents = []
+        self.chat_handler.file_handler.save_chat_contents(self.chat_contents)
+        self.logger.info("Cleared chat display and contents in UI")
+
+    def close_code_popup(self):
+        if self.code_popup:
+            self.code_popup.close()
+            self.code_popup = None
+            self.logger.info("Closed code pop-up")
+
+    def load_chat_contents(self):
+        self.chat_contents = self.chat_handler.file_handler.load_chat_contents()
+        for item in self.chat_contents:
+            self.add_to_chat(item["sender"], item["message"])
+        self.logger.info(f"Loaded {len(self.chat_contents)} messages from chat log")

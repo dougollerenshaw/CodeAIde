@@ -16,13 +16,17 @@ from codeaide.utils.constants import (
     AI_PROVIDERS,
     DEFAULT_MODEL,
     DEFAULT_PROVIDER,
+    INITIAL_MESSAGE,
 )
 from codeaide.utils.cost_tracker import CostTracker
 from codeaide.utils.environment_manager import EnvironmentManager
 from codeaide.utils.file_handler import FileHandler
 from codeaide.utils.terminal_manager import TerminalManager
 from codeaide.utils.general_utils import generate_session_id
-from codeaide.utils.logging_config import get_logger
+from codeaide.utils.logging_config import get_logger, setup_logger
+from PyQt5.QtWidgets import QMessageBox
+
+logger = get_logger()
 
 
 class ChatHandler:
@@ -39,6 +43,9 @@ class ChatHandler:
         self.session_id = generate_session_id()
         self.cost_tracker = CostTracker()
         self.file_handler = FileHandler(session_id=self.session_id)
+        self.session_dir = (
+            self.file_handler.session_dir
+        )  # Store the specific session directory
         self.logger = get_logger()
         self.conversation_history = self.file_handler.load_chat_history()
         self.env_manager = EnvironmentManager()
@@ -54,6 +61,7 @@ class ChatHandler:
 
         self.api_key_valid, self.api_key_message = self.check_api_key()
         self.logger.info(f"New session started with ID: {self.session_id}")
+        self.logger.info(f"Session directory: {self.session_dir}")
 
     def check_api_key(self):
         """
@@ -529,3 +537,53 @@ class ChatHandler:
 
     def set_latest_version(self, version):
         self.latest_version = version
+
+    def start_new_session(self, chat_window):
+        logger.info("Starting new session")
+
+        # Log the previous session path correctly
+        logger.info(f"Previous session path: {self.session_dir}")
+
+        # Generate new session ID
+        new_session_id = generate_session_id()
+
+        # Create new FileHandler with new session ID
+        new_file_handler = FileHandler(session_id=new_session_id)
+
+        # Copy existing log to new session and set up new logger
+        self.file_handler.copy_log_to_new_session(new_session_id)
+        setup_logger(new_file_handler.session_dir)
+
+        # Update instance variables
+        self.session_id = new_session_id
+        self.file_handler = new_file_handler
+        self.session_dir = new_file_handler.session_dir  # Update the session directory
+
+        # Clear conversation history
+        self.conversation_history = []
+
+        # Clear chat display in UI
+        chat_window.clear_chat_display()
+
+        # Close code pop-up if it exists
+        chat_window.close_code_popup()
+
+        # Add system message about previous session
+        system_message = f"A new session has been started. The previous chat will not be visible to the agent. Previous session data saved in: {self.session_dir}"
+        chat_window.add_to_chat("System", system_message)
+        chat_window.add_to_chat("AI", INITIAL_MESSAGE)
+
+        logger.info(f"New session started with ID: {self.session_id}")
+        logger.info(f"New session directory: {self.session_dir}")
+
+    # New method to load a previous session
+    def load_previous_session(self, session_id, chat_window):
+        logger.info(f"Loading previous session: {session_id}")
+        self.session_id = session_id
+        self.file_handler = FileHandler(session_id=session_id)
+        self.session_dir = self.file_handler.session_dir
+
+        # Load chat contents
+        chat_window.load_chat_contents()
+
+        logger.info(f"Loaded previous session with ID: {self.session_id}")
