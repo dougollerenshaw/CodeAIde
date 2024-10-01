@@ -124,3 +124,25 @@ class FileHandler:
         self._ensure_output_dirs_exist()
         setup_logger(self.session_dir)
         self.logger = get_logger()
+
+    def copy_log_to_new_session(self, new_session_id):
+        new_session_dir = os.path.join(self.output_dir, new_session_id)
+        os.makedirs(new_session_dir, exist_ok=True)
+
+        old_log_file = os.path.join(self.session_dir, "codeaide.log")
+        new_log_file = os.path.join(new_session_dir, "codeaide.log")
+
+        os.makedirs(os.path.dirname(new_log_file), exist_ok=True)
+
+        if os.path.exists(old_log_file):
+            shutil.copy2(old_log_file, new_log_file)
+
+            # Append a message to the old log file
+            with open(old_log_file, "a") as f:
+                f.write("\nNew session created. Log continued in new file.\n")
+
+            self.logger.info(f"Copied log file to new session: {new_session_id}")
+        else:
+            self.logger.warning(
+                f"No existing log file found to copy for new session: {new_session_id}"
+            )

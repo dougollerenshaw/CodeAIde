@@ -133,14 +133,13 @@ class ChatWindow(QMainWindow):
         self.example_button.clicked.connect(self.load_example)
         button_layout.addWidget(self.example_button)
 
-        self.exit_button = QPushButton("Exit", self)
-        self.exit_button.clicked.connect(self.on_exit)
-        button_layout.addWidget(self.exit_button)
-
-        # Add New Session button
         self.new_session_button = QPushButton("New Session")
         self.new_session_button.clicked.connect(self.on_new_session_clicked)
         button_layout.addWidget(self.new_session_button)
+
+        self.exit_button = QPushButton("Exit", self)
+        self.exit_button.clicked.connect(self.on_exit)
+        button_layout.addWidget(self.exit_button)
 
         main_layout.addLayout(button_layout)
 
@@ -351,7 +350,7 @@ class ChatWindow(QMainWindow):
         self.add_to_chat("System", switch_message)
 
     def on_new_session_clicked(self):
-        logger.info("User clicked New Session button")
+        self.logger.info("User clicked New Session button")
         reply = QMessageBox.question(
             self,
             "New Session",
@@ -361,17 +360,17 @@ class ChatWindow(QMainWindow):
         )
 
         if reply == QMessageBox.Yes:
-            logger.info("User confirmed starting a new session")
+            self.logger.info("User confirmed starting a new session")
             self.chat_handler.start_new_session(self)
         else:
-            logger.info("User cancelled starting a new session")
+            self.logger.info("User cancelled starting a new session")
 
     def clear_chat_display(self):
         self.chat_display.clear()
-        logger.info("Cleared chat display in UI")
+        self.logger.info("Cleared chat display in UI")
 
     def close_code_popup(self):
         if self.code_popup:
             self.code_popup.close()
             self.code_popup = None
-            logger.info("Closed code pop-up")
+            self.logger.info("Closed code pop-up")

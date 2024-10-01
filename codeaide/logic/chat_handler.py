@@ -16,6 +16,7 @@ from codeaide.utils.constants import (
     AI_PROVIDERS,
     DEFAULT_MODEL,
     DEFAULT_PROVIDER,
+    INITIAL_MESSAGE,
 )
 from codeaide.utils.cost_tracker import CostTracker
 from codeaide.utils.environment_manager import EnvironmentManager
@@ -42,6 +43,9 @@ class ChatHandler:
         self.session_id = generate_session_id()
         self.cost_tracker = CostTracker()
         self.file_handler = FileHandler(session_id=self.session_id)
+        self.session_dir = (
+            self.file_handler.session_dir
+        )  # Store the specific session directory
         self.logger = get_logger()
         self.conversation_history = self.file_handler.load_chat_history()
         self.env_manager = EnvironmentManager()
@@ -57,6 +61,7 @@ class ChatHandler:
 
         self.api_key_valid, self.api_key_message = self.check_api_key()
         self.logger.info(f"New session started with ID: {self.session_id}")
+        self.logger.info(f"Session directory: {self.session_dir}")
 
     def check_api_key(self):
         """
@@ -536,6 +541,9 @@ class ChatHandler:
     def start_new_session(self, chat_window):
         logger.info("Starting new session")
 
+        # Log the previous session path correctly
+        logger.info(f"Previous session path: {self.session_dir}")
+
         # Generate new session ID
         new_session_id = generate_session_id()
 
@@ -549,6 +557,7 @@ class ChatHandler:
         # Update instance variables
         self.session_id = new_session_id
         self.file_handler = new_file_handler
+        self.session_dir = new_file_handler.session_dir  # Update the session directory
 
         # Clear conversation history
         self.conversation_history = []
@@ -559,9 +568,10 @@ class ChatHandler:
         # Close code pop-up if it exists
         chat_window.close_code_popup()
 
-        # Show confirmation message
-        QMessageBox.information(
-            chat_window, "New Session", "A new session has been started."
-        )
+        # Add system message about previous session
+        system_message = f"A new session has been started. The previous chat will not be visible to the agent. Previous session data saved in: {self.session_dir}"
+        chat_window.add_to_chat("System", system_message)
+        chat_window.add_to_chat("AI", INITIAL_MESSAGE)
 
         logger.info(f"New session started with ID: {self.session_id}")
+        logger.info(f"New session directory: {self.session_dir}")
