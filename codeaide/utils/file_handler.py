@@ -1,6 +1,8 @@
 import os
 import shutil
 import json
+import logging
+from codeaide.utils.logging_config import setup_logger, get_logger
 
 
 class FileHandler:
@@ -24,6 +26,10 @@ class FileHandler:
         )
         self._ensure_output_dirs_exist()
 
+        if self.session_dir:
+            setup_logger(self.session_dir)
+        self.logger = get_logger()
+
     def _ensure_output_dirs_exist(self):
         os.makedirs(self.output_dir, exist_ok=True)
         if self.session_dir:
@@ -39,23 +45,23 @@ class FileHandler:
         )
         abs_code_path = os.path.abspath(code_path)
         abs_req_path = os.path.abspath(requirements_path)
-        print(f"Attempting to save code to: {abs_code_path}")
+        self.logger.info(f"Attempting to save code to: {abs_code_path}")
         try:
             with open(abs_code_path, "w") as file:
                 file.write(code)
-            print(f"Code saved successfully to: {abs_code_path}")
-            print(f"Saving associated requirements to: {abs_req_path}")
+            self.logger.info(f"Code saved successfully to: {abs_code_path}")
+            self.logger.info(f"Saving associated requirements to: {abs_req_path}")
             self.save_requirements(requirements, version)
         except Exception as e:
-            print(f"Error saving file: {str(e)}")
-        print(f"Adding version {version} to versions_dict")
+            self.logger.error(f"Error saving file: {str(e)}")
+        self.logger.info(f"Adding version {version} to versions_dict")
         self.versions_dict[version] = {
             "version_description": version_description,
             "requirements": requirements,
             "code_path": abs_code_path,
             "requirements_path": abs_req_path,
         }
-        print(f"Current versions dict: {self.versions_dict}")
+        self.logger.debug(f"Current versions dict: {self.versions_dict}")
         return code_path
 
     def save_requirements(self, requirements, version):
@@ -94,9 +100,11 @@ class FileHandler:
         try:
             with open(self.chat_history_file, "w", encoding="utf-8") as f:
                 json.dump(conversation_history, f, ensure_ascii=False, indent=2)
-            print(f"Chat history saved successfully to: {self.chat_history_file}")
+            self.logger.info(
+                f"Chat history saved successfully to: {self.chat_history_file}"
+            )
         except Exception as e:
-            print(f"Error saving chat history: {str(e)}")
+            self.logger.error(f"Error saving chat history: {str(e)}")
 
     def load_chat_history(self):
         if not self.session_dir or not os.path.exists(self.chat_history_file):
@@ -106,7 +114,7 @@ class FileHandler:
             with open(self.chat_history_file, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
-            print(f"Error loading chat history: {str(e)}")
+            self.logger.error(f"Error loading chat history: {str(e)}")
             return []
 
     def set_session_id(self, session_id):
@@ -114,3 +122,5 @@ class FileHandler:
         self.session_dir = os.path.join(self.output_dir, self.session_id)
         self.chat_history_file = os.path.join(self.session_dir, "chat_history.json")
         self._ensure_output_dirs_exist()
+        setup_logger(self.session_dir)
+        self.logger = get_logger()

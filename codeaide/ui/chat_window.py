@@ -2,6 +2,7 @@ import signal
 import sys
 import traceback
 import time
+import logging
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
@@ -37,11 +38,13 @@ from codeaide.utils.constants import (
     DEFAULT_MODEL,
     MODEL_SWITCH_MESSAGE,
 )
+from codeaide.utils.logging_config import get_logger
 
 
 class ChatWindow(QMainWindow):
     def __init__(self, chat_handler):
         super().__init__()
+        self.logger = get_logger()
         self.setWindowTitle("🤖 CodeAIde 🤖")
         self.setGeometry(0, 0, CHAT_WINDOW_WIDTH, CHAT_WINDOW_HEIGHT)
         self.chat_handler = chat_handler
@@ -63,6 +66,8 @@ class ChatWindow(QMainWindow):
         self.timer = QTimer()
         self.timer.start(500)
         self.timer.timeout.connect(lambda: None)
+
+        self.logger.info("Chat window initialized")
 
     def setup_ui(self):
         central_widget = QWidget(self)
@@ -134,6 +139,8 @@ class ChatWindow(QMainWindow):
 
         main_layout.addLayout(button_layout)
 
+        self.logger.info("Chat window UI initialized")
+
     def eventFilter(self, obj, event):
         if obj == self.input_text and event.type() == event.KeyPress:
             if (
@@ -150,6 +157,8 @@ class ChatWindow(QMainWindow):
         user_input = self.input_text.toPlainText().strip()
         if not user_input:
             return
+
+        self.logger.info(f"User input: {user_input}")
 
         # Clear the input field immediately
         self.input_text.clear()
@@ -188,6 +197,8 @@ class ChatWindow(QMainWindow):
         html_message = general_utils.format_chat_message(sender, message, font, color)
         self.chat_display.append(html_message + "<br>")
         self.chat_display.ensureCursorVisible()
+
+        self.logger.debug(f"Adding message to chat from {sender}: {message}")
 
     def display_thinking(self):
         self.add_to_chat("AI", "Thinking... 🤔")
@@ -263,6 +274,7 @@ class ChatWindow(QMainWindow):
             QMessageBox.information(self, "No Selection", "No example was selected.")
 
     def on_exit(self):
+        self.logger.info("User clicked Exit button, awaiting reply")
         reply = QMessageBox.question(
             self,
             "Quit",
@@ -270,6 +282,7 @@ class ChatWindow(QMainWindow):
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No,
         )
+        self.logger.info(f"User clicked Exit button, reply: {reply}")
         if reply == QMessageBox.Yes:
             self.close()
 
@@ -291,7 +304,7 @@ class ChatWindow(QMainWindow):
         if models:
             self.model_dropdown.setCurrentText(list(models)[0])
         else:
-            print(f"No models available for provider {provider}")
+            self.logger.info(f"No models available for provider {provider}")
 
     def update_chat_handler(self):
         provider = self.provider_dropdown.currentText()
@@ -303,17 +316,17 @@ class ChatWindow(QMainWindow):
         current_version = self.chat_handler.get_latest_version()
         success, message = self.chat_handler.set_model(provider, model)
 
-        print(f"In update_chat_handler: current_version: {current_version}")
-        print(f"In update_chat_handler, success: {success}")
-        print(f"In update_chat_handler, message: {message}")
+        self.logger.info(f"In update_chat_handler: current_version: {current_version}")
+        self.logger.info(f"In update_chat_handler, success: {success}")
+        self.logger.info(f"In update_chat_handler, message: {message}")
 
         if not success:
-            print(f"In update_chat_handler, not success")
+            self.logger.info(f"In update_chat_handler, not success")
             if message:  # This indicates that an API key is required
                 self.waiting_for_api_key = True
                 self.add_to_chat("AI", message)
             else:
-                print(f"In update_chat_handler, not success, no message")
+                self.logger.info(f"In update_chat_handler, not success, no message")
                 self.add_to_chat(
                     "System",
                     f"Failed to set model {model} for provider {provider}. Please check your API key.",

@@ -1,8 +1,10 @@
 import os
-
 import yaml
 from PyQt5.QtGui import QFont, QColor
 from datetime import datetime
+from codeaide.utils.logging_config import get_logger
+
+logger = get_logger()
 
 # Store the path of the general_utils.py file
 UTILS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -31,22 +33,22 @@ def get_examples_file_path():
 def load_examples():
     """Load and return all examples from the YAML file."""
     examples_file = get_examples_file_path()
-    print(f"Attempting to load examples from: {examples_file}")  # Debug print
+    logger.info(f"Attempting to load examples from: {examples_file}")
     if not os.path.exists(examples_file):
-        print(f"Examples file not found: {examples_file}")
+        logger.error(f"Examples file not found: {examples_file}")
         return []
 
     try:
         with open(examples_file, "r", encoding="utf-8") as file:
             data = yaml.safe_load(file)
         examples = data.get("examples", [])
-        print(f"Loaded {len(examples)} examples")  # Debug print
+        logger.info(f"Loaded {len(examples)} examples")
         return examples
     except yaml.YAMLError as e:
-        print(f"YAML Error: {str(e)}")
+        logger.error(f"YAML Error: {str(e)}")
         return []
     except Exception as e:
-        print(f"Unexpected error: {str(e)}")
+        logger.error(f"Unexpected error: {str(e)}")
         return []
 
 
@@ -57,6 +59,7 @@ def set_font(font_tuple):
     elif len(font_tuple) == 3:
         font_family, font_size, font_style = font_tuple
     else:
+        logger.error("Invalid font tuple length")
         raise ValueError("Font tuple must be of length 2 or 3")
 
     qfont = QFont(font_family, font_size)
@@ -114,4 +117,6 @@ def generate_session_id():
     Generate a unique session ID based on the current timestamp.
     Format: YYYYMMDD_HHMMSS
     """
-    return datetime.now().strftime("%Y%m%d_%H%M%S")
+    session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+    logger.info(f"Generated new session ID: {session_id}")
+    return session_id
