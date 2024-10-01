@@ -2,6 +2,7 @@ import os
 
 import yaml
 from PyQt5.QtGui import QFont, QColor
+from datetime import datetime
 
 # Store the path of the general_utils.py file
 UTILS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -106,3 +107,11 @@ def increment_version(version, increment=1, major_or_minor="minor"):
         return f"{major + increment}.{minor}"
     else:
         return f"{major}.{minor + increment}"
+
+
+def generate_session_id():
+    """
+    Generate a unique session ID based on the current timestamp.
+    Format: YYYYMMDD_HHMMSS
+    """
+    return datetime.now().strftime("%Y%m%d_%H%M%S")

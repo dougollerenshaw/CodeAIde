@@ -1,5 +1,5 @@
-# Exclude generated code folder
-generated_code/
+# Exclude session_data folder
+session_data/
 
 # Exclude videos folder
 videos/

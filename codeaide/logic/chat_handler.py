@@ -20,6 +20,7 @@ from codeaide.utils.cost_tracker import CostTracker
 from codeaide.utils.environment_manager import EnvironmentManager
 from codeaide.utils.file_handler import FileHandler
 from codeaide.utils.terminal_manager import TerminalManager
+from codeaide.utils.general_utils import generate_session_id
 
 
 class ChatHandler:
@@ -33,10 +34,10 @@ class ChatHandler:
         Returns:
             None
         """
+        self.session_id = generate_session_id()
         self.cost_tracker = CostTracker()
-        self.conversation_history = []
-        self.file_handler = FileHandler()
-        self.file_handler.clear_output_dir()
+        self.file_handler = FileHandler(session_id=self.session_id)
+        self.conversation_history = self.file_handler.load_chat_history()
         self.env_manager = EnvironmentManager()
         self.terminal_manager = TerminalManager()
         self.latest_version = "0.0"
@@ -49,6 +50,7 @@ class ChatHandler:
         ]["max_tokens"]
 
         self.api_key_valid, self.api_key_message = self.check_api_key()
+        print(f"New session started with ID: {self.session_id}")
 
     def check_api_key(self):
         """
@@ -217,6 +219,7 @@ class ChatHandler:
         self.conversation_history.append(
             {"role": "user", "content": user_input + version_info}
         )
+        self.file_handler.save_chat_history(self.conversation_history)
 
     def get_ai_response(self):
         """
@@ -314,6 +317,7 @@ class ChatHandler:
             )
         else:
             raise ValueError(f"Unsupported provider: {provider}")
+        self.file_handler.save_chat_history(self.conversation_history)
 
     def create_questions_response(self, text, questions):
         """
@@ -391,6 +395,7 @@ class ChatHandler:
         """
         error_prompt = f"\n\nThere was an error in your last response: {error_message}. Please ensure you're using proper JSON formatting to avoid this error and others like it. Please don't apologize for the error because it will be hidden from the end user."
         self.conversation_history[-1]["content"] += error_prompt
+        self.file_handler.save_chat_history(self.conversation_history)
 
     def handle_unexpected_error(self, e):
         """
@@ -436,9 +441,11 @@ class ChatHandler:
             None
         """
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        script_path = os.path.join(project_root, self.file_handler.output_dir, filename)
+        script_path = os.path.join(
+            project_root, self.file_handler.session_dir, filename
+        )
         req_path = os.path.join(
-            project_root, self.file_handler.output_dir, requirements
+            project_root, self.file_handler.session_dir, requirements
         )
 
         activation_command = self.env_manager.get_activation_command()
@@ -510,6 +517,7 @@ class ChatHandler:
             None
         """
         self.conversation_history = []
+        self.file_handler.save_chat_history(self.conversation_history)
 
     def get_latest_version(self):
         return self.latest_version

@@ -1,28 +1,14 @@
 import os
 import tempfile
-
 import pytest
-
 from codeaide.utils.file_handler import FileHandler
 
 
 @pytest.fixture
 def file_handler():
     with tempfile.TemporaryDirectory() as temp_dir:
-        handler = FileHandler(base_dir=temp_dir)
+        handler = FileHandler(base_dir=temp_dir, session_id="test_session")
         yield handler
-
-
-def test_clear_output_dir(file_handler):
-    # Create a file in the output directory
-    test_file = os.path.join(file_handler.output_dir, "test.txt")
-    with open(test_file, "w") as f:
-        f.write("test")
-
-    file_handler.clear_output_dir()
-
-    assert os.path.exists(file_handler.output_dir)
-    assert len(os.listdir(file_handler.output_dir)) == 0
 
 
 def test_save_code(file_handler):
@@ -87,3 +73,12 @@ def test_nonexistent_version(file_handler):
 
     with pytest.raises(FileNotFoundError):
         file_handler.get_requirements("nonexistent")
+
+
+def test_set_session_id(file_handler):
+    new_session_id = "new_test_session"
+    file_handler.set_session_id(new_session_id)
+
+    assert file_handler.session_id == new_session_id
+    assert file_handler.session_dir.endswith(new_session_id)
+    assert os.path.exists(file_handler.session_dir)

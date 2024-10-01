@@ -320,11 +320,6 @@ class ChatWindow(QMainWindow):
                 )
             return
 
-        self.chat_handler.clear_conversation_history()
-        self.chat_handler.set_latest_version(
-            current_version
-        )  # Maintain the version number
-
         new_version = general_utils.increment_version(
             current_version, major_or_minor="major", increment=1
         )
@@ -333,8 +328,6 @@ class ChatWindow(QMainWindow):
         switch_message = MODEL_SWITCH_MESSAGE.format(
             provider=provider,
             model=model,
-            current_version=current_version,
-            new_version=new_version,
         )
 
         self.add_to_chat("System", switch_message)
