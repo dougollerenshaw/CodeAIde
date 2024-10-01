@@ -3,6 +3,7 @@ import os
 import sys
 import re
 import traceback
+import logging
 from codeaide.utils.api_utils import (
     parse_response,
     send_api_request,
@@ -21,6 +22,7 @@ from codeaide.utils.environment_manager import EnvironmentManager
 from codeaide.utils.file_handler import FileHandler
 from codeaide.utils.terminal_manager import TerminalManager
 from codeaide.utils.general_utils import generate_session_id
+from codeaide.utils.logging_config import get_logger
 
 
 class ChatHandler:
@@ -37,6 +39,7 @@ class ChatHandler:
         self.session_id = generate_session_id()
         self.cost_tracker = CostTracker()
         self.file_handler = FileHandler(session_id=self.session_id)
+        self.logger = get_logger()
         self.conversation_history = self.file_handler.load_chat_history()
         self.env_manager = EnvironmentManager()
         self.terminal_manager = TerminalManager()
@@ -50,7 +53,7 @@ class ChatHandler:
         ]["max_tokens"]
 
         self.api_key_valid, self.api_key_message = self.check_api_key()
-        print(f"New session started with ID: {self.session_id}")
+        self.logger.info(f"New session started with ID: {self.session_id}")
 
     def check_api_key(self):
         """
@@ -63,7 +66,9 @@ class ChatHandler:
         self.api_key_set = self.api_client is not None
 
         if not self.api_key_set:
+            self.logger.warning("API key not set")
             return False, self.get_api_key_instructions(self.current_provider)
+        self.logger.info("API key is valid")
         return True, None
 
     def get_api_key_instructions(self, provider):
@@ -166,7 +171,7 @@ class ChatHandler:
         Returns:
             dict: A response dictionary containing the type and content of the response.
         """
-        print(f"Processing input: {user_input}")
+        self.logger.info(f"Processing input: {user_input}")
         try:
             if not self.api_key_set:
                 return {
@@ -190,7 +195,7 @@ class ChatHandler:
                 try:
                     return self.process_ai_response(response)
                 except ValueError as e:
-                    print(f"ValueError: {str(e)}\n")
+                    self.logger.error(f"ValueError: {str(e)}\n")
                     if not self.is_last_attempt(attempt):
                         self.add_error_prompt_to_history(str(e))
                     else:
@@ -484,12 +489,12 @@ class ChatHandler:
         return bool(self.conversation_history)
 
     def set_model(self, provider, model):
-        print(f"In set_model: provider: {provider}, model: {model}")
+        self.logger.info(f"In set_model: provider: {provider}, model: {model}")
         if provider not in AI_PROVIDERS:
-            print(f"Invalid provider: {provider}")
+            self.logger.error(f"Invalid provider: {provider}")
             return False, None
         if model not in AI_PROVIDERS[provider]["models"]:
-            print(f"Invalid model {model} for provider {provider}")
+            self.logger.error(f"Invalid model {model} for provider {provider}")
             return False, None
 
         self.current_provider = provider
@@ -503,7 +508,7 @@ class ChatHandler:
         if not api_key_valid:
             return False, message
 
-        print(f"Model {model} for provider {provider} set successfully.")
+        self.logger.info(f"Model {model} for provider {provider} set successfully.")
         return True, None
 
     def clear_conversation_history(self):

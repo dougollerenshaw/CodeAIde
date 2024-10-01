@@ -6,6 +6,7 @@ import openai
 from decouple import config, AutoConfig
 import hjson
 from anthropic import APIError
+import logging
 
 from codeaide.utils.constants import (
     AI_PROVIDERS,
@@ -13,6 +14,9 @@ from codeaide.utils.constants import (
     DEFAULT_PROVIDER,
     SYSTEM_PROMPT,
 )
+from codeaide.utils.logging_config import get_logger
+
+logger = get_logger()
 
 
 class MissingAPIKeyException(Exception):
@@ -34,11 +38,13 @@ def get_api_client(provider=DEFAULT_PROVIDER, model=DEFAULT_MODEL):
 
         api_key_name = AI_PROVIDERS[provider]["api_key_name"]
         api_key = config(api_key_name, default=None)
-        print(f"Attempting to get API key for {provider} with key name: {api_key_name}")
-        print(f"API key found: {'Yes' if api_key else 'No'}")
+        logger.info(
+            f"Attempting to get API key for {provider} with key name: {api_key_name}"
+        )
+        logger.info(f"API key found: {'Yes' if api_key else 'No'}")
 
         if api_key is None or api_key.strip() == "":
-            print(f"API key for {provider} is missing or empty")
+            logger.warning(f"API key for {provider} is missing or empty")
             return None
 
         if provider.lower() == "anthropic":
@@ -48,7 +54,7 @@ def get_api_client(provider=DEFAULT_PROVIDER, model=DEFAULT_MODEL):
         else:
             raise ValueError(f"Unsupported provider: {provider}")
     except Exception as e:
-        print(f"Error initializing {provider.capitalize()} API client: {str(e)}")
+        logger.error(f"Error initializing {provider.capitalize()} API client: {str(e)}")
         return None
 
 
@@ -81,13 +87,13 @@ def save_api_key(service, api_key):
 
         return True
     except Exception as e:
-        print(f"Error saving API key: {str(e)}")
+        logger.error(f"Error saving API key: {str(e)}")
         return False
 
 
 def send_api_request(api_client, conversation_history, max_tokens, model, provider):
-    print(f"Sending API request with model: {model} and max_tokens: {max_tokens}")
-    print(f"Conversation history: {conversation_history}\n")
+    logger.info(f"Sending API request with model: {model} and max_tokens: {max_tokens}")
+    logger.debug(f"Conversation history: {conversation_history}")
 
     try:
         if provider.lower() == "anthropic":
@@ -113,11 +119,11 @@ def send_api_request(api_client, conversation_history, max_tokens, model, provid
         else:
             raise NotImplementedError(f"API request for {provider} not implemented")
 
-        print(f"Received response from {provider}")
-        print(f"Response object: {response}")
+        logger.info(f"Received response from {provider}")
+        logger.debug(f"Response object: {response}")
         return response
     except Exception as e:
-        print(f"Error in API request to {provider}: {str(e)}")
+        logger.error(f"Error in API request to {provider}: {str(e)}")
         return None
 
 
@@ -125,7 +131,7 @@ def parse_response(response, provider):
     if not response:
         raise ValueError("Empty or invalid response received")
 
-    print(f"Received response: {response}\n")
+    logger.debug(f"Received response: {response}")
 
     if provider.lower() == "anthropic":
         if not response.content:
@@ -182,4 +188,4 @@ def check_api_connection():
 
 if __name__ == "__main__":
     success, message = check_api_connection()
-    print(f"Connection {'successful' if success else 'failed'}: {message}")
+    logger.info(f"Connection {'successful' if success else 'failed'}: {message}")

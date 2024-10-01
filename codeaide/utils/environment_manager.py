@@ -2,6 +2,9 @@ import os
 import subprocess
 import sys
 import venv
+from codeaide.utils.logging_config import get_logger
+
+logger = get_logger()
 
 
 class EnvironmentManager:
@@ -16,7 +19,10 @@ class EnvironmentManager:
 
     def _setup_environment(self):
         if not os.path.exists(self.env_path):
+            logger.info(f"Creating new virtual environment at {self.env_path}")
             venv.create(self.env_path, with_pip=True)
+        else:
+            logger.info(f"Using existing virtual environment at {self.env_path}")
 
     def _get_installed_packages(self):
         pip_path = (
@@ -24,12 +30,20 @@ class EnvironmentManager:
             if os.name != "nt"
             else os.path.join(self.env_path, "Scripts", "pip.exe")
         )
-        result = subprocess.run(
-            f"{pip_path} freeze", shell=True, check=True, capture_output=True, text=True
-        )
-        self.installed_packages = {
-            pkg.split("==")[0].lower() for pkg in result.stdout.split("\n") if pkg
-        }
+        try:
+            result = subprocess.run(
+                f"{pip_path} freeze",
+                shell=True,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            self.installed_packages = {
+                pkg.split("==")[0].lower() for pkg in result.stdout.split("\n") if pkg
+            }
+            logger.info(f"Found {len(self.installed_packages)} installed packages")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Error getting installed packages: {e}")
 
     def install_requirements(self, requirements_file):
         pip_path = (
@@ -44,19 +58,32 @@ class EnvironmentManager:
 
         if packages_to_install:
             packages_str = " ".join(packages_to_install)
+            logger.info(f"Installing new packages: {packages_str}")
             try:
                 subprocess.run(
                     f"{pip_path} install {packages_str}", shell=True, check=True
                 )
                 self.installed_packages.update(packages_to_install)
+                logger.info(
+                    f"Successfully installed {len(packages_to_install)} new packages"
+                )
                 return list(packages_to_install)
             except subprocess.CalledProcessError as e:
-                print(f"Error installing requirements: {e}")
+                logger.error(f"Error installing requirements: {e}")
                 return []
+        else:
+            logger.info("No new packages to install")
         return []
 
     def get_activation_command(self):
         if os.name == "nt":  # Windows
-            return f"call {os.path.join(self.env_path, 'Scripts', 'activate.bat')}"
+            activation_path = os.path.join(self.env_path, "Scripts", "activate.bat")
         else:  # Unix-like
-            return f"source {os.path.join(self.env_path, 'bin', 'activate')}"
+            activation_path = os.path.join(self.env_path, "bin", "activate")
+
+        logger.info(f"Generated activation command for {os.name} system")
+        return (
+            f"call {activation_path}"
+            if os.name == "nt"
+            else f"source {activation_path}"
+        )
