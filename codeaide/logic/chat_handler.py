@@ -22,7 +22,10 @@ from codeaide.utils.environment_manager import EnvironmentManager
 from codeaide.utils.file_handler import FileHandler
 from codeaide.utils.terminal_manager import TerminalManager
 from codeaide.utils.general_utils import generate_session_id
-from codeaide.utils.logging_config import get_logger
+from codeaide.utils.logging_config import get_logger, setup_logger
+from PyQt5.QtWidgets import QMessageBox
+
+logger = get_logger()
 
 
 class ChatHandler:
@@ -529,3 +532,36 @@ class ChatHandler:
 
     def set_latest_version(self, version):
         self.latest_version = version
+
+    def start_new_session(self, chat_window):
+        logger.info("Starting new session")
+
+        # Generate new session ID
+        new_session_id = generate_session_id()
+
+        # Create new FileHandler with new session ID
+        new_file_handler = FileHandler(session_id=new_session_id)
+
+        # Copy existing log to new session and set up new logger
+        self.file_handler.copy_log_to_new_session(new_session_id)
+        setup_logger(new_file_handler.session_dir)
+
+        # Update instance variables
+        self.session_id = new_session_id
+        self.file_handler = new_file_handler
+
+        # Clear conversation history
+        self.conversation_history = []
+
+        # Clear chat display in UI
+        chat_window.clear_chat_display()
+
+        # Close code pop-up if it exists
+        chat_window.close_code_popup()
+
+        # Show confirmation message
+        QMessageBox.information(
+            chat_window, "New Session", "A new session has been started."
+        )
+
+        logger.info(f"New session started with ID: {self.session_id}")
