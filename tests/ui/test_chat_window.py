@@ -122,8 +122,6 @@ def test_model_switching(chat_window, mock_chat_handler):
     expected_message = MODEL_SWITCH_MESSAGE.format(
         provider=test_provider,
         model=test_model,
-        current_version=current_version,
-        new_version=new_version,
     )
     assert expected_message in chat_window.chat_display.toPlainText()
 

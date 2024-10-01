@@ -53,9 +53,7 @@ CODE_FONT = ("Courier", 14, "normal")
 MODEL_SWITCH_MESSAGE = """
 ==================================================
 Switched to {provider} - {model}
-Starting a new conversation with this model.
-Current code version: {current_version}
-Any new code will be versioned starting from {new_version}
+Continuing the conversation with this model.
 ==================================================
 """
 
