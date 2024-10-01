@@ -24,6 +24,11 @@ class FileHandler:
             if self.session_dir
             else None
         )
+        self.chat_window_log_file = (
+            os.path.join(self.session_dir, "chat_window_log.json")
+            if self.session_dir
+            else None
+        )
         self._ensure_output_dirs_exist()
 
         if self.session_dir:
@@ -115,6 +120,30 @@ class FileHandler:
                 return json.load(f)
         except Exception as e:
             self.logger.error(f"Error loading chat history: {str(e)}")
+            return []
+
+    def save_chat_contents(self, chat_contents):
+        if not self.session_dir:
+            self.logger.error("Session directory not set. Cannot save chat contents.")
+            return
+
+        try:
+            with open(self.chat_window_log_file, "w", encoding="utf-8") as f:
+                json.dump(chat_contents, f, ensure_ascii=False, indent=2)
+            self.logger.info(f"Chat contents saved to {self.chat_window_log_file}")
+        except Exception as e:
+            self.logger.error(f"Error saving chat contents: {str(e)}")
+
+    def load_chat_contents(self):
+        if not os.path.exists(self.chat_window_log_file):
+            self.logger.info(f"No chat log file found at {self.chat_window_log_file}")
+            return []
+
+        try:
+            with open(self.chat_window_log_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            self.logger.error(f"Error loading chat contents: {str(e)}")
             return []
 
     def set_session_id(self, session_id):

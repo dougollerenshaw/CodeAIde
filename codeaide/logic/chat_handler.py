@@ -575,3 +575,15 @@ class ChatHandler:
 
         logger.info(f"New session started with ID: {self.session_id}")
         logger.info(f"New session directory: {self.session_dir}")
+
+    # New method to load a previous session
+    def load_previous_session(self, session_id, chat_window):
+        logger.info(f"Loading previous session: {session_id}")
+        self.session_id = session_id
+        self.file_handler = FileHandler(session_id=session_id)
+        self.session_dir = self.file_handler.session_dir
+
+        # Load chat contents
+        chat_window.load_chat_contents()
+
+        logger.info(f"Loaded previous session with ID: {self.session_id}")
