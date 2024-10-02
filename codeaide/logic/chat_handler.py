@@ -444,45 +444,41 @@ class ChatHandler:
 
     def run_generated_code(self, filename, requirements):
         """
-        Run the generated code in a new environment.
+        Run the generated code in a new terminal window.
 
         Args:
-            filename (str): The name of the file containing the generated code.
-            requirements (str): The name of the file containing the requirements.
+            filename (str): The path to the generated script file.
+            requirements (str): The path to the requirements file.
 
-        Returns:
-            None
+        This method activates the virtual environment, installs any required
+        packages, and then runs the generated script in a new terminal window.
         """
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        script_path = os.path.join(
-            project_root, self.file_handler.session_dir, filename
+        self.logger.info(
+            f"run_generated_code called with filename: {filename}, requirements: {requirements}"
         )
-        req_path = os.path.join(
-            project_root, self.file_handler.session_dir, requirements
-        )
+
+        script_path = os.path.abspath(filename)
+        self.logger.info(f"Full script path: {script_path}")
 
         activation_command = self.env_manager.get_activation_command()
-        new_packages = self.env_manager.install_requirements(req_path)
+        self.logger.info(f"Activation command: {activation_command}")
 
         script_content = f"""
-        clear # Clear the terminal
-        echo "Activating environment..."
+        #!/bin/bash
         {activation_command}
-        """
-
-        if new_packages:
-            script_content += 'echo "New dependencies installed:"\n'
-            for package in new_packages:
-                script_content += f'echo "  - {package}"\n'
-
-        script_content += f"""
-        echo "Running {filename}..."
-        python "{script_path}"
-        
+        echo "Running script: {script_path}"
+        echo "----------------------------------------"
+        python -u "{script_path}"
+        echo "----------------------------------------"
         echo "Script execution completed."
+        echo "Press Enter to close this window..."
+        read
         """
 
-        self.terminal_manager.run_in_terminal(script_content)
+        def error_callback():
+            self.logger.error("An error occurred while running the script.")
+
+        self.terminal_manager.run_in_terminal(script_content, error_callback)
 
     def is_task_in_progress(self):
         """
