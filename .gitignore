@@ -1,6 +1,9 @@
 # Exclude session_data folder
 session_data/
 
+# Exclude the data folder
+data/
+
 # Exclude videos folder
 videos/
 
