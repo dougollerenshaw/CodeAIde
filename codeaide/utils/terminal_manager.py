@@ -3,8 +3,33 @@ import os
 import logging
 import threading
 import tempfile
-import time
 import platform
+from PyQt5.QtWidgets import QApplication, QDialog, QVBoxLayout, QTextEdit, QPushButton
+from PyQt5.QtCore import Qt, QObject, pyqtSignal
+
+
+class ErrorDialogSignaler(QObject):
+    show_dialog = pyqtSignal(str)
+
+
+class ErrorDialog(QDialog):
+    def __init__(self, error_text):
+        super().__init__()
+        self.setWindowTitle("Error Detected")
+        self.setModal(True)
+        layout = QVBoxLayout()
+
+        text_edit = QTextEdit()
+        text_edit.setPlainText(error_text)
+        text_edit.setReadOnly(True)
+        layout.addWidget(text_edit)
+
+        ok_button = QPushButton("OK")
+        ok_button.clicked.connect(self.accept)
+        layout.addWidget(ok_button)
+
+        self.setLayout(layout)
+        self.resize(600, 400)
 
 
 class TerminalManager:
@@ -12,11 +37,15 @@ class TerminalManager:
         self.logger = logging.getLogger(__name__)
         self.terminals = []
         self.system = platform.system().lower()
+        self.output_buffer = []
+        self.error_dialog_signaler = ErrorDialogSignaler()
+        self.error_dialog_signaler.show_dialog.connect(
+            self.show_error_dialog_on_main_thread
+        )
 
     def run_in_terminal(self, script_content, error_callback):
         self.logger.info("run_in_terminal called in TerminalManager")
 
-        # Create a temporary script file
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".command", delete=False
         ) as temp_file:
@@ -47,34 +76,36 @@ class TerminalManager:
         subprocess.Popen(["osascript", "-e", applescript])
         self._monitor_output(script_file, error_callback)
 
-    def _run_in_windows_cmd(self, script_file, error_callback):
-        cmd = f'start cmd /K "{script_file}"'
-        subprocess.Popen(cmd, shell=True)
-        self._monitor_output(script_file, error_callback)
-
-    def _run_in_linux_terminal(self, script_file, error_callback):
-        cmd = f'x-terminal-emulator -e "{script_file}"'
-        subprocess.Popen(cmd, shell=True)
-        self._monitor_output(script_file, error_callback)
-
     def _monitor_output(self, script_file, error_callback):
         def monitor():
+            self.logger.info("TerminalManager: Starting to monitor output")
             process = subprocess.Popen(
                 ["/bin/bash", script_file],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
             )
+            traceback_detected = False
             for line in process.stdout:
                 self.logger.info(f"Terminal output: {line.strip()}")
-                if "Traceback" in line:
+                self.output_buffer.append(line)
+                if "Traceback" in line and not traceback_detected:
+                    traceback_detected = True
                     error_callback()
+                    self.error_dialog_signaler.show_dialog.emit(
+                        "\n".join(self.output_buffer)
+                    )
             process.wait()
 
         threading.Thread(target=monitor, daemon=True).start()
 
+    def show_error_dialog_on_main_thread(self, error_text):
+        dialog = ErrorDialog(error_text)
+        dialog.exec_()
+        self.output_buffer.clear()
+
     def cleanup(self):
-        for _, script_file in self.terminals:
+        for script_file in self.terminals:
             try:
                 if os.path.exists(script_file):
                     os.remove(script_file)

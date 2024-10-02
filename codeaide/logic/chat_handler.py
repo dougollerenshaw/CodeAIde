@@ -25,12 +25,14 @@ from codeaide.utils.terminal_manager import TerminalManager
 from codeaide.utils.general_utils import generate_session_id
 from codeaide.utils.logging_config import get_logger, setup_logger
 from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtCore import QObject
 
 logger = get_logger()
 
 
-class ChatHandler:
-    def __init__(self):
+class ChatHandler(QObject):
+    def __init__(self, parent=None):
+        super().__init__(parent)
         """
         Initialize the ChatHandler class.
 
@@ -579,3 +581,6 @@ class ChatHandler:
         chat_window.load_chat_contents()
 
         logger.info(f"Loaded previous session with ID: {self.session_id}")
+
+    def cleanup(self):
+        self.terminal_manager.cleanup()
