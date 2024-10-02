@@ -6,6 +6,8 @@ import tempfile
 import platform
 from PyQt5.QtWidgets import QApplication, QDialog, QVBoxLayout, QTextEdit, QPushButton
 from PyQt5.QtCore import Qt, QObject, pyqtSignal
+import select
+from codeaide.utils.constants import START_MARKER, END_MARKER
 
 
 class ErrorDialogSignaler(QObject):
@@ -84,18 +86,41 @@ class TerminalManager:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
+                bufsize=1,
+                universal_newlines=True,
             )
+
+            capturing = False
             traceback_detected = False
-            for line in process.stdout:
-                self.logger.info(f"Terminal output: {line.strip()}")
-                self.output_buffer.append(line)
-                if "Traceback" in line and not traceback_detected:
-                    traceback_detected = True
-                    error_callback()
-                    self.error_dialog_signaler.show_dialog.emit(
-                        "\n".join(self.output_buffer)
-                    )
+
+            for line in iter(process.stdout.readline, ""):
+                self.logger.info(f"Read line: {line.strip()}")
+
+                if START_MARKER in line:
+                    capturing = True
+                    continue
+                elif END_MARKER in line:
+                    break
+
+                if capturing:
+                    self.logger.info(f"Terminal output: {line.strip()}")
+                    self.output_buffer.append(line)
+                    if "Traceback" in line and not traceback_detected:
+                        traceback_detected = True
+                        error_callback()
+                    self.logger.info(f"Traceback detected: {traceback_detected}")
+
+            self.logger.info("Done with loop to read output")
+            process.stdout.close()
+            process.terminate()
             process.wait()
+
+            if traceback_detected:
+                self.logger.info("Traceback detected")
+                self.logger.info(f"Output buffer: {self.output_buffer}")
+                self.logger.info("Calling show_error_dialog_on_main_thread")
+                self.error_dialog_signaler.show_dialog.emit("".join(self.output_buffer))
+                self.logger.info("show_error_dialog_on_main_thread called")
 
         threading.Thread(target=monitor, daemon=True).start()
 

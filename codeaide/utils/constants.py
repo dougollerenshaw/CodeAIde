@@ -25,6 +25,10 @@ AI_PROVIDERS = {
 DEFAULT_MODEL = "gpt-3.5-turbo"
 DEFAULT_PROVIDER = "openai"
 
+# Code execution markers
+START_MARKER = "<<<CODEAIDE_SCRIPT_START>>>"
+END_MARKER = "<<<CODEAIDE_SCRIPT_END>>>"
+
 # Other existing constants remain unchanged
 MAX_RETRIES = 3
 

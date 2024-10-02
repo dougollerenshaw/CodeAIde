@@ -17,6 +17,8 @@ from codeaide.utils.constants import (
     DEFAULT_MODEL,
     DEFAULT_PROVIDER,
     INITIAL_MESSAGE,
+    START_MARKER,
+    END_MARKER,
 )
 from codeaide.utils.cost_tracker import CostTracker
 from codeaide.utils.environment_manager import EnvironmentManager
@@ -464,10 +466,10 @@ class ChatHandler(QObject):
         script_content = f"""
         #!/bin/bash
         echo "Running script: {script_path}"
-        echo "----------------------------------------"
+        echo "{START_MARKER}"
         {activation_command}
         python -u "{script_path}"
-        echo "----------------------------------------"
+        echo "{END_MARKER}"
         echo "Script execution completed."
         echo "Press Enter to close this window..."
         read
