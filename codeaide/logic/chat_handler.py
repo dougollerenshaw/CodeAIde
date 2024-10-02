@@ -453,10 +453,6 @@ class ChatHandler:
         This method activates the virtual environment, installs any required
         packages, and then runs the generated script in a new terminal window.
         """
-        self.logger.info(
-            f"run_generated_code called with filename: {filename}, requirements: {requirements}"
-        )
-
         script_path = os.path.abspath(filename)
         self.logger.info(f"Full script path: {script_path}")
 
@@ -465,9 +461,9 @@ class ChatHandler:
 
         script_content = f"""
         #!/bin/bash
-        {activation_command}
         echo "Running script: {script_path}"
         echo "----------------------------------------"
+        {activation_command}
         python -u "{script_path}"
         echo "----------------------------------------"
         echo "Script execution completed."
