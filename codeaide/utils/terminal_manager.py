@@ -59,6 +59,7 @@ class ScriptRunner:
         echo "{self.START_MARKER}" > {output_file_path}
         python -u {self.script_path} 2>&1 | tee -a {output_file_path}
         echo "{self.END_MARKER}" >> {output_file_path}
+        echo "Script execution completed. You can close this window."
         """
 
         with open(bash_script_path, "w") as f:

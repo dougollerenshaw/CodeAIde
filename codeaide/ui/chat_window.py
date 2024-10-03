@@ -409,9 +409,7 @@ class ChatWindow(QMainWindow):
         msg_box.setIcon(QMessageBox.Warning)
 
         # Create custom buttons
-        send_button = msg_box.addButton(
-            "Send Traceback to Agent", QMessageBox.ActionRole
-        )
+        send_button = msg_box.addButton("Request a fix", QMessageBox.ActionRole)
         ignore_button = msg_box.addButton("Ignore", QMessageBox.RejectRole)
 
         # Set a fixed width for the dialog
