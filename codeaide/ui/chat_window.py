@@ -3,8 +3,8 @@ import sys
 import traceback
 import time
 import logging
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QColor
+from PyQt5.QtCore import Qt, QTimer, pyqtSlot
+from PyQt5.QtGui import QColor, QFont
 from PyQt5.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -264,19 +264,19 @@ class ChatWindow(QMainWindow):
         self.example_button.setEnabled(True)
 
     def update_or_create_code_popup(self, response):
-        if self.code_popup and not self.code_popup.isHidden():
-            self.code_popup.update_with_new_version(
-                response["code"], response.get("requirements", [])
+        code = response.get("code", "")
+        requirements = response.get("requirements", [])
+        if self.code_popup is None:
+            self.code_popup = CodePopup(
+                self,
+                self.chat_handler.file_handler,
+                code,
+                requirements,
+                self.chat_handler.run_generated_code,
+                chat_handler=self.chat_handler,  # Pass chat_handler explicitly
             )
         else:
-            self.code_popup = CodePopup(
-                None,
-                self.chat_handler.file_handler,
-                response["code"],
-                response.get("requirements", []),
-                self.chat_handler.run_generated_code,
-            )
-            self.code_popup.show()
+            self.code_popup.update_with_new_version(code, requirements)
 
     def load_example(self):
         example = show_example_dialog(self)
@@ -300,10 +300,17 @@ class ChatWindow(QMainWindow):
             self.close()
 
     def closeEvent(self, event):
-        self.cost_tracker.print_summary()
-        if self.code_popup:
-            self.code_popup.close()
-        super().closeEvent(event)
+        # Perform cleanup
+        if hasattr(self, "code_popup") and self.code_popup:
+            self.code_popup.terminal_manager.cleanup()
+
+        # Use a timer to allow for a short delay before closing
+        QTimer.singleShot(1000, self.force_close)
+        event.ignore()  # Prevent immediate closure
+
+    def force_close(self):
+        # Force close the application
+        QApplication.quit()
 
     def sigint_handler(self, *args):
         QApplication.quit()
@@ -391,3 +398,47 @@ class ChatWindow(QMainWindow):
         for item in self.chat_contents:
             self.add_to_chat(item["sender"], item["message"])
         self.logger.info(f"Loaded {len(self.chat_contents)} messages from chat log")
+
+    @pyqtSlot(str)
+    def display_traceback_dialog(self, traceback_text):
+        self.logger.info(f"display_traceback_dialog called with: {traceback_text}")
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Error Detected")
+        msg_box.setText("An error was detected in the running script:")
+        msg_box.setInformativeText(traceback_text)
+        msg_box.setIcon(QMessageBox.Warning)
+
+        # Create custom buttons
+        send_button = msg_box.addButton(
+            "Send Traceback to Agent", QMessageBox.ActionRole
+        )
+        ignore_button = msg_box.addButton("Ignore", QMessageBox.RejectRole)
+
+        # Set a fixed width for the dialog
+        msg_box.setFixedWidth(600)
+
+        # Make the dialog resizable
+        msg_box.setSizeGripEnabled(True)
+
+        # Set a monospace font for the traceback text
+        text_browser = msg_box.findChild(QTextEdit)
+        if text_browser:
+            font = QFont("Courier")
+            font.setStyleHint(QFont.Monospace)
+            font.setFixedPitch(True)
+            font.setPointSize(10)
+            text_browser.setFont(font)
+
+        msg_box.exec_()
+
+        if msg_box.clickedButton() == send_button:
+            self.send_traceback_to_agent(traceback_text)
+
+    def send_traceback_to_agent(self, traceback_text):
+        message = (
+            "The following traceback occurred when running the code you just provided:\n\n"
+            f"```\n{traceback_text}\n```\n\n"
+            "Please provide a solution that avoids this error."
+        )
+        self.input_text.setPlainText(message)
+        self.on_submit()

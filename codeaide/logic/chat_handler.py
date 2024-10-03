@@ -25,8 +25,7 @@ from codeaide.utils.terminal_manager import TerminalManager
 from codeaide.utils.general_utils import generate_session_id
 from codeaide.utils.logging_config import get_logger, setup_logger
 from PyQt5.QtWidgets import QMessageBox
-
-logger = get_logger()
+from PyQt5.QtCore import QMetaObject, Qt, Q_ARG
 
 
 class ChatHandler:
@@ -62,6 +61,7 @@ class ChatHandler:
         self.api_key_valid, self.api_key_message = self.check_api_key()
         self.logger.info(f"New session started with ID: {self.session_id}")
         self.logger.info(f"Session directory: {self.session_dir}")
+        self.main_window = None  # We'll set this later
 
     def check_api_key(self):
         """
@@ -482,7 +482,9 @@ class ChatHandler:
         echo "Script execution completed."
         """
 
-        self.terminal_manager.run_in_terminal(script_content)
+        process = self.terminal_manager.run_in_terminal(script_content)
+
+        return process
 
     def is_task_in_progress(self):
         """
@@ -539,10 +541,10 @@ class ChatHandler:
         self.latest_version = version
 
     def start_new_session(self, chat_window):
-        logger.info("Starting new session")
+        self.logger.info("Starting new session")
 
         # Log the previous session path correctly
-        logger.info(f"Previous session path: {self.session_dir}")
+        self.logger.info(f"Previous session path: {self.session_dir}")
 
         # Generate new session ID
         new_session_id = generate_session_id()
@@ -573,12 +575,12 @@ class ChatHandler:
         chat_window.add_to_chat("System", system_message)
         chat_window.add_to_chat("AI", INITIAL_MESSAGE)
 
-        logger.info(f"New session started with ID: {self.session_id}")
-        logger.info(f"New session directory: {self.session_dir}")
+        self.logger.info(f"New session started with ID: {self.session_id}")
+        self.logger.info(f"New session directory: {self.session_dir}")
 
     # New method to load a previous session
     def load_previous_session(self, session_id, chat_window):
-        logger.info(f"Loading previous session: {session_id}")
+        self.logger.info(f"Loading previous session: {session_id}")
         self.session_id = session_id
         self.file_handler = FileHandler(session_id=session_id)
         self.session_dir = self.file_handler.session_dir
@@ -586,4 +588,20 @@ class ChatHandler:
         # Load chat contents
         chat_window.load_chat_contents()
 
-        logger.info(f"Loaded previous session with ID: {self.session_id}")
+        self.logger.info(f"Loaded previous session with ID: {self.session_id}")
+
+    def set_main_window(self, main_window):
+        self.main_window = main_window
+        self.logger.info(f"Main window set: {self.main_window}")
+
+    def show_traceback_dialog(self, traceback_text):
+        self.logger.info("show_traceback_dialog called with:", traceback_text)
+        if self.main_window:
+            QMetaObject.invokeMethod(
+                self.main_window,
+                "display_traceback_dialog",
+                Qt.QueuedConnection,
+                Q_ARG(str, traceback_text),
+            )
+        else:
+            self.logger.info("self.main_window is None")

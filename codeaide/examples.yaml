@@ -7,6 +7,24 @@ examples:
       • Decay rate: Approximately 20% of peak amplitude by 10 seconds
       • Line color: Black
 
+  - description: Exponentially decaying sine wave plot with print statements
+    prompt: |
+      Could you provide a plot of an exponentially decaying sine wave with the following specifications:
+      • Time range: 0 to 10 seconds
+      • Sine wave frequency: 2 Hz
+      • Decay rate: Approximately 20% of peak amplitude by 10 seconds
+      • Line color: Black
+      Please include print statements in the code that print the amplitude at each 1 second interval.
+
+  - description: Exponentially decaying sine wave plot with error
+    prompt: |
+      Could you provide a plot of an exponentially decaying sine wave with the following specifications:
+      • Time range: 0 to 10 seconds
+      • Sine wave frequency: 2 Hz
+      • Decay rate: Approximately 20% of peak amplitude by 10 seconds
+      • Line color: Black
+      I'm testing some error handling code. Please make sure the code fails to run and produces a traceback. Just doing something like "pint('test')" should be sufficient.
+
   - description: Create a Simple Snake Game using Pygame
     prompt: |
       Create a Python script that implements a basic Snake game using Pygame. The game should have the following features:

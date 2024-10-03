@@ -20,8 +20,8 @@ AI_PROVIDERS = {
 }
 
 # Default model
-DEFAULT_MODEL = "claude-3-5-sonnet-20240620"
-DEFAULT_PROVIDER = "anthropic"
+DEFAULT_MODEL = "gpt-3.5-turbo"
+DEFAULT_PROVIDER = "openai"
 
 # Other existing constants remain unchanged
 MAX_RETRIES = 3

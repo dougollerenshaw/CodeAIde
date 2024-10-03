@@ -19,6 +19,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QPlainTextEdit,
+    QMessageBox,
 )
 from pygments import highlight
 from pygments.lexers import PythonLexer
@@ -32,6 +33,7 @@ from codeaide.utils.constants import (
     CODE_WINDOW_HEIGHT,
     CODE_WINDOW_WIDTH,
 )
+from codeaide.utils.terminal_manager import TerminalManager
 
 
 class LineNumberArea(QWidget):
@@ -241,7 +243,9 @@ class PythonHighlighter(QSyntaxHighlighter):
 
 
 class CodePopup(QWidget):
-    def __init__(self, parent, file_handler, code, requirements, run_callback):
+    def __init__(
+        self, parent, file_handler, code, requirements, run_callback, chat_handler=None
+    ):
         super().__init__(parent, Qt.Window)
         self.setWindowTitle("💻 Generated Code 💻")
         self.resize(CODE_WINDOW_WIDTH, CODE_WINDOW_HEIGHT)
@@ -253,6 +257,25 @@ class CodePopup(QWidget):
         self.position_window()
         self.loading_versions = False
         self.show()
+
+        # Use the chat_handler passed as an argument, or try to get it from the parent
+        self.chat_handler = chat_handler or (parent.chat_handler if parent else None)
+
+        # Create TerminalManager with a safe traceback callback
+        self.terminal_manager = TerminalManager(
+            traceback_callback=self.safe_show_traceback_dialog
+        )
+
+    def safe_show_traceback_dialog(self, traceback_text):
+        if self.chat_handler:
+            self.chat_handler.show_traceback_dialog(traceback_text)
+        else:
+            # Fallback to showing a simple message box if chat_handler is not available
+            QMessageBox.warning(
+                self,
+                "Traceback Detected",
+                f"A traceback was detected:\n\n{traceback_text}",
+            )
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
@@ -355,7 +378,8 @@ class CodePopup(QWidget):
         with open(req_path, "w") as f:
             f.write("\n".join(requirements))
 
-        self.run_callback(code_path, req_path)
+        # Assuming you have a TerminalManager instance available as self.terminal_manager
+        self.terminal_manager.run_script(code_path, req_path)
 
     def on_copy_code(self):
         QApplication.clipboard().setText(self.text_area.toPlainText())
