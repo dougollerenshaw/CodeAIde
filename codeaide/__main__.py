@@ -23,7 +23,7 @@ def main():
         chat_window = ChatWindow(chat_handler)
         chat_handler.set_main_window(chat_window)
         chat_window.show()
-        app.exec_()  # Remove sys.exit()
+        app.exec_()
 
 
 if __name__ == "__main__":
