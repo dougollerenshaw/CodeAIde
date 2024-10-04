@@ -418,6 +418,7 @@ class ChatWindow(QMainWindow):
         self.code_popup.activateWindow()
 
     def show_traceback_dialog(self, traceback_text):
+        self.logger.info("ChatWindow: Showing traceback dialog")
         dialog = TracebackDialog(self, traceback_text)
         if dialog.exec_():
             self.chat_handler.send_traceback_to_agent(traceback_text)

@@ -20,6 +20,7 @@ from PyQt5.QtWidgets import (
     QWidget,
     QPlainTextEdit,
     QMessageBox,
+    QDialog,
 )
 from pygments import highlight
 from pygments.lexers import PythonLexer
@@ -242,11 +243,11 @@ class PythonHighlighter(QSyntaxHighlighter):
         self.setCurrentBlockState(0)
 
 
-class CodePopup(QWidget):
+class CodePopup(QDialog):
     def __init__(
         self, parent, file_handler, code, requirements, run_callback, chat_handler
     ):
-        super().__init__(parent, Qt.Window)
+        super().__init__(parent)
         self.setWindowTitle("💻 Generated Code 💻")
         self.resize(CODE_WINDOW_WIDTH, CODE_WINDOW_HEIGHT)
         self.file_handler = file_handler
@@ -267,7 +268,11 @@ class CodePopup(QWidget):
         )
 
     def safe_show_traceback_dialog(self, traceback_text):
-        self.chat_handler.show_traceback_dialog(traceback_text)
+        if self.chat_handler:
+            # Change this line
+            self.chat_handler.emit_traceback_signal(traceback_text)
+        else:
+            self.logger.error("ChatHandler not available for showing traceback dialog")
 
     def setup_ui(self):
         layout = QVBoxLayout(self)

@@ -27,7 +27,6 @@ from codeaide.utils.logging_config import get_logger, setup_logger
 from PyQt5.QtWidgets import QMessageBox, QTextEdit
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QObject, QMetaObject, Qt, Q_ARG, pyqtSlot, pyqtSignal
-from codeaide.ui.chat_window import ChatWindow
 from codeaide.ui.traceback_dialog import TracebackDialog
 
 
@@ -59,7 +58,7 @@ class ChatHandler(QObject):
         self.logger = get_logger()
         self.conversation_history = self.file_handler.load_chat_history()
         self.terminal_manager = TerminalManager(
-            traceback_callback=self.show_traceback_dialog
+            traceback_callback=self.emit_traceback_signal  # Change this line
         )
         self.latest_version = "0.0"
         self.api_client = None
@@ -76,6 +75,10 @@ class ChatHandler(QObject):
         self.chat_window = None
 
     def start_application(self):
+        from codeaide.ui.chat_window import (
+            ChatWindow,
+        )  # Import here to avoid circular imports
+
         self.chat_window = ChatWindow(self)
         self.connect_signals()
         self.chat_window.show()
@@ -83,6 +86,7 @@ class ChatHandler(QObject):
     def connect_signals(self):
         self.update_chat_signal.connect(self.chat_window.add_to_chat)
         self.show_code_signal.connect(self.chat_window.show_code)
+        self.traceback_occurred.connect(self.chat_window.show_traceback_dialog)
 
     def check_api_key(self):
         """
@@ -588,13 +592,8 @@ class ChatHandler(QObject):
 
         self.logger.info(f"Loaded previous session with ID: {self.session_id}")
 
-    def set_main_window(self, main_window):
-        # This method can be removed later, but keep it for now to avoid breaking existing code
-        if self.chat_window is None:
-            self.chat_window = main_window
-
-    def show_traceback_dialog(self, traceback_text):
-        self.logger.info(f"Traceback occurred: {traceback_text}")
+    def emit_traceback_signal(self, traceback_text):
+        self.logger.info("Emitting traceback signal")
         self.traceback_occurred.emit(traceback_text)
 
     def send_traceback_to_agent(self, traceback_text):

@@ -155,6 +155,7 @@ class ScriptRunner:
             self.logger.info(traceback_text)
             self.logger.info("-----------------------")
             if self.traceback_callback:
+                self.logger.info("Calling traceback callback")
                 self.traceback_callback(traceback_text)
             self.traceback_buffer = []
 
