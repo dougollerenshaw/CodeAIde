@@ -27,6 +27,7 @@ from codeaide.utils.logging_config import get_logger, setup_logger
 from PyQt5.QtWidgets import QMessageBox, QTextEdit
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import QObject, QMetaObject, Qt, Q_ARG, pyqtSlot
+from codeaide.ui.chat_window import ChatWindow
 
 
 class ChatHandler(QObject):
@@ -64,7 +65,11 @@ class ChatHandler(QObject):
         self.api_key_valid, self.api_key_message = self.check_api_key()
         self.logger.info(f"New session started with ID: {self.session_id}")
         self.logger.info(f"Session directory: {self.session_dir}")
-        self.main_window = None  # We'll set this later
+        self.chat_window = None
+
+    def start_application(self):
+        self.chat_window = ChatWindow(self)
+        self.chat_window.show()
 
     def check_api_key(self):
         """
@@ -571,12 +576,12 @@ class ChatHandler(QObject):
         self.logger.info(f"Loaded previous session with ID: {self.session_id}")
 
     def set_main_window(self, main_window):
-        self.main_window = main_window
-        self.logger.info(f"Main window set: {self.main_window}")
+        # This method can be removed later, but keep it for now to avoid breaking existing code
+        self.chat_window = main_window
 
     def show_traceback_dialog(self, traceback_text):
         self.logger.info(f"show_traceback_dialog called with: {traceback_text}")
-        if self.main_window:
+        if self.chat_window:
             QMetaObject.invokeMethod(
                 self,
                 "_display_traceback_dialog",
@@ -584,12 +589,12 @@ class ChatHandler(QObject):
                 Q_ARG(str, traceback_text),
             )
         else:
-            self.logger.info("self.main_window is None")
+            self.logger.info("self.chat_window is None")
 
     @pyqtSlot(str)
     def _display_traceback_dialog(self, traceback_text):
         self.logger.info(f"_display_traceback_dialog called with: {traceback_text}")
-        msg_box = QMessageBox(self.main_window)
+        msg_box = QMessageBox(self.chat_window)
         msg_box.setWindowTitle("Error Detected")
         msg_box.setText("An error was detected in the running script:")
         msg_box.setInformativeText(traceback_text)
@@ -625,5 +630,5 @@ class ChatHandler(QObject):
             f"```\n{traceback_text}\n```\n\n"
             "Please provide a solution that avoids this error."
         )
-        self.main_window.input_text.setPlainText(message)
-        self.main_window.on_submit()
+        self.chat_window.input_text.setPlainText(message)
+        self.chat_window.on_submit()

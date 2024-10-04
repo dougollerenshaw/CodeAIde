@@ -3,7 +3,6 @@ import sys
 from PyQt5.QtWidgets import QApplication
 
 from codeaide.logic.chat_handler import ChatHandler
-from codeaide.ui.chat_window import ChatWindow
 from codeaide.utils import api_utils
 
 
@@ -20,10 +19,8 @@ def main():
             print("Error:", message)
     else:
         app = QApplication(sys.argv)
-        chat_window = ChatWindow(chat_handler)
-        chat_handler.set_main_window(chat_window)
-        chat_window.show()
-        app.exec_()
+        chat_handler.start_application()
+        sys.exit(app.exec_())
 
 
 if __name__ == "__main__":
