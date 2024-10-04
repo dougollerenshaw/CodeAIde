@@ -1,6 +1,5 @@
 from PyQt5.QtWidgets import QMessageBox, QTextEdit
 from PyQt5.QtGui import QFont
-from PyQt5.QtCore import Qt
 import logging
 
 
@@ -38,7 +37,7 @@ class TracebackDialog(QMessageBox):
 
     def exec_(self):
         self.logger.info("TracebackDialog: Executing dialog")
-        result = super().exec_()
+        super().exec_()
         user_choice = "fix" if self.clickedButton() == self.send_button else "ignore"
         self.logger.info(f"TracebackDialog: User chose to {user_choice} the traceback")
         return self.clickedButton() == self.send_button

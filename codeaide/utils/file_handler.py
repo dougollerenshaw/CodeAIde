@@ -1,7 +1,6 @@
 import os
 import shutil
 import json
-import logging
 from codeaide.utils.logging_config import setup_logger, get_logger
 
 

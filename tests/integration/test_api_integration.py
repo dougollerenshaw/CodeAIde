@@ -28,7 +28,6 @@ or as part of automated CI/CD processes to avoid unnecessary API charges.
 
 import pytest
 from codeaide.utils.api_utils import get_api_client, send_api_request, parse_response
-from codeaide.utils.constants import SYSTEM_PROMPT
 
 ANTHROPIC_MODEL = "claude-3-haiku-20240307"
 OPENAI_MODEL = "gpt-3.5-turbo"

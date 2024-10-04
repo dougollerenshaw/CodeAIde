@@ -3,6 +3,7 @@ import yaml
 from PyQt5.QtGui import QFont, QColor
 from datetime import datetime
 from codeaide.utils.logging_config import get_logger
+import sys
 
 logger = get_logger()
 

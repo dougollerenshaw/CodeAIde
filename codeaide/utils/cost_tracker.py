@@ -1,6 +1,3 @@
-from datetime import datetime
-
-
 class CostTracker:
     def __init__(self):
         self.cost_log = []

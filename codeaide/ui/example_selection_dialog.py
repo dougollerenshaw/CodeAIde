@@ -9,7 +9,6 @@ from PyQt5.QtWidgets import (
 )
 
 from codeaide.utils import general_utils
-from codeaide.utils.constants import CHAT_WINDOW_BG, CHAT_WINDOW_FG
 
 
 class ExampleSelectionDialog(QDialog):

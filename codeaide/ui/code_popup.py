@@ -15,16 +15,11 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
-    QTextEdit,
     QVBoxLayout,
     QWidget,
     QPlainTextEdit,
-    QMessageBox,
     QDialog,
 )
-from pygments import highlight
-from pygments.lexers import PythonLexer
-from pygments.formatters import HtmlFormatter
 
 from codeaide.utils import general_utils
 from codeaide.utils.constants import (

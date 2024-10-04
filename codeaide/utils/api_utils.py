@@ -1,12 +1,8 @@
 import os
-import json
-import re
 import anthropic
 import openai
-from decouple import config, AutoConfig
+from decouple import AutoConfig
 import hjson
-from anthropic import APIError
-import logging
 
 from codeaide.utils.constants import (
     AI_PROVIDERS,

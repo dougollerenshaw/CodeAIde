@@ -1,8 +1,4 @@
 import signal
-import sys
-import traceback
-import time
-import logging
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
@@ -11,8 +7,6 @@ from PyQt5.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
-    QSizePolicy,
-    QSpacerItem,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -35,7 +29,6 @@ from codeaide.utils.constants import (
     USER_MESSAGE_COLOR,
     AI_PROVIDERS,
     DEFAULT_PROVIDER,
-    DEFAULT_MODEL,
     MODEL_SWITCH_MESSAGE,
 )
 from codeaide.utils.logging_config import get_logger
@@ -168,7 +161,7 @@ class ChatWindow(QMainWindow):
             self.logger.info("ChatWindow: Empty input, returning")
             return
 
-        self.logger.info(f"ChatWindow: Processing user input")
+        self.logger.info("ChatWindow: Processing user input")
         self.input_text.clear()
 
         if self.waiting_for_api_key:
@@ -350,21 +343,17 @@ class ChatWindow(QMainWindow):
         self.logger.info(f"In update_chat_handler, message: {message}")
 
         if not success:
-            self.logger.info(f"In update_chat_handler, not success")
+            self.logger.info("In update_chat_handler, not success")
             if message:  # This indicates that an API key is required
                 self.waiting_for_api_key = True
                 self.add_to_chat("AI", message)
             else:
-                self.logger.info(f"In update_chat_handler, not success, no message")
+                self.logger.info("In update_chat_handler, not success, no message")
                 self.add_to_chat(
                     "System",
                     f"Failed to set model {model} for provider {provider}. Please check your API key.",
                 )
             return
-
-        new_version = general_utils.increment_version(
-            current_version, major_or_minor="major", increment=1
-        )
 
         # Use the constant with format
         switch_message = MODEL_SWITCH_MESSAGE.format(

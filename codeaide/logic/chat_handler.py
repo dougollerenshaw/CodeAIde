@@ -1,15 +1,12 @@
 import json
 import os
-import sys
 import re
 import traceback
-import logging
 from codeaide.utils.api_utils import (
     parse_response,
     send_api_request,
     get_api_client,
     save_api_key,
-    MissingAPIKeyException,
 )
 from codeaide.utils.constants import (
     MAX_RETRIES,
@@ -19,15 +16,11 @@ from codeaide.utils.constants import (
     INITIAL_MESSAGE,
 )
 from codeaide.utils.cost_tracker import CostTracker
-from codeaide.utils.environment_manager import EnvironmentManager
 from codeaide.utils.file_handler import FileHandler
 from codeaide.utils.terminal_manager import TerminalManager
 from codeaide.utils.general_utils import generate_session_id
 from codeaide.utils.logging_config import get_logger, setup_logger
-from PyQt5.QtWidgets import QMessageBox, QTextEdit
-from PyQt5.QtGui import QFont
-from PyQt5.QtCore import QObject, QMetaObject, Qt, Q_ARG, pyqtSlot, pyqtSignal
-from codeaide.ui.traceback_dialog import TracebackDialog
+from PyQt5.QtCore import QObject, pyqtSignal
 
 
 class ChatHandler(QObject):
@@ -354,7 +347,7 @@ class ChatHandler(QObject):
                 {"role": "assistant", "content": response.choices[0].message.content}
             )
         else:
-            raise ValueError(f"Unsupported provider: {provider}")
+            raise ValueError(f"Unsupported provider: {self.current_provider}")
         self.file_handler.save_chat_history(self.conversation_history)
 
     def create_questions_response(self, text, questions):
@@ -607,7 +600,7 @@ class ChatHandler(QObject):
             f"```\n{traceback_text}\n```\n\n"
             "Please provide a solution that avoids this error."
         )
-        self.logger.info(f"ChatHandler: Setting input text in chat window")
+        self.logger.info("ChatHandler: Setting input text in chat window")
         self.chat_window.input_text.setPlainText(message)
-        self.logger.info(f"ChatHandler: Calling on_submit in chat window")
+        self.logger.info("ChatHandler: Calling on_submit in chat window")
         self.chat_window.on_submit()
