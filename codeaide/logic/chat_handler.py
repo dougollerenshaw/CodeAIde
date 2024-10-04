@@ -24,12 +24,14 @@ from codeaide.utils.file_handler import FileHandler
 from codeaide.utils.terminal_manager import TerminalManager
 from codeaide.utils.general_utils import generate_session_id
 from codeaide.utils.logging_config import get_logger, setup_logger
-from PyQt5.QtWidgets import QMessageBox
-from PyQt5.QtCore import QMetaObject, Qt, Q_ARG
+from PyQt5.QtWidgets import QMessageBox, QTextEdit
+from PyQt5.QtGui import QFont
+from PyQt5.QtCore import QObject, QMetaObject, Qt, Q_ARG, pyqtSlot
 
 
-class ChatHandler:
+class ChatHandler(QObject):
     def __init__(self):
+        super().__init__()
         """
         Initialize the ChatHandler class.
 
@@ -573,13 +575,55 @@ class ChatHandler:
         self.logger.info(f"Main window set: {self.main_window}")
 
     def show_traceback_dialog(self, traceback_text):
-        self.logger.info("show_traceback_dialog called with:", traceback_text)
+        self.logger.info(f"show_traceback_dialog called with: {traceback_text}")
         if self.main_window:
             QMetaObject.invokeMethod(
-                self.main_window,
-                "display_traceback_dialog",
+                self,
+                "_display_traceback_dialog",
                 Qt.QueuedConnection,
                 Q_ARG(str, traceback_text),
             )
         else:
             self.logger.info("self.main_window is None")
+
+    @pyqtSlot(str)
+    def _display_traceback_dialog(self, traceback_text):
+        self.logger.info(f"_display_traceback_dialog called with: {traceback_text}")
+        msg_box = QMessageBox(self.main_window)
+        msg_box.setWindowTitle("Error Detected")
+        msg_box.setText("An error was detected in the running script:")
+        msg_box.setInformativeText(traceback_text)
+        msg_box.setIcon(QMessageBox.Warning)
+
+        # Create custom buttons
+        send_button = msg_box.addButton("Request a fix", QMessageBox.ActionRole)
+        ignore_button = msg_box.addButton("Ignore", QMessageBox.RejectRole)
+
+        # Set a fixed width for the dialog
+        msg_box.setFixedWidth(600)
+
+        # Make the dialog resizable
+        msg_box.setSizeGripEnabled(True)
+
+        # Set a monospace font for the traceback text
+        text_browser = msg_box.findChild(QTextEdit)
+        if text_browser:
+            font = QFont("Courier")
+            font.setStyleHint(QFont.Monospace)
+            font.setFixedPitch(True)
+            font.setPointSize(10)
+            text_browser.setFont(font)
+
+        msg_box.exec_()
+
+        if msg_box.clickedButton() == send_button:
+            self.send_traceback_to_agent(traceback_text)
+
+    def send_traceback_to_agent(self, traceback_text):
+        message = (
+            "The following error occurred when running the code you just provided:\n\n"
+            f"```\n{traceback_text}\n```\n\n"
+            "Please provide a solution that avoids this error."
+        )
+        self.main_window.input_text.setPlainText(message)
+        self.main_window.on_submit()
