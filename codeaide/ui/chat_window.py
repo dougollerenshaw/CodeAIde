@@ -3,8 +3,8 @@ import sys
 import traceback
 import time
 import logging
-from PyQt5.QtCore import Qt, QTimer, pyqtSlot
-from PyQt5.QtGui import QColor, QFont
+from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
     QApplication,
     QHBoxLayout,
