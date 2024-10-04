@@ -50,6 +50,7 @@ examples:
       • Use CrossEntropyLoss as the loss function
       • Use Stochastic Gradient Descent (SGD) as the optimizer
       • Train for 5 epochs
+      • Include progress bars for training and validation
       • Print the training loss after each epoch
       • Evaluate and print the accuracy on the test set after training
       • The visualization should include a grid of images with their predicted and true labels. Show 10 examples of correct predictions and 10 examples of incorrect predictions.

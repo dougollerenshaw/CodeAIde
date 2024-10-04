@@ -264,19 +264,19 @@ class ChatWindow(QMainWindow):
         self.example_button.setEnabled(True)
 
     def update_or_create_code_popup(self, response):
-        if self.code_popup and not self.code_popup.isHidden():
-            self.code_popup.update_with_new_version(
-                response["code"], response.get("requirements", [])
+        code = response.get("code", "")
+        requirements = response.get("requirements", [])
+        if self.code_popup is None:
+            self.code_popup = CodePopup(
+                self,
+                self.chat_handler.file_handler,
+                code,
+                requirements,
+                self.chat_handler.run_generated_code,
+                chat_handler=self.chat_handler,
             )
         else:
-            self.code_popup = CodePopup(
-                None,
-                self.chat_handler.file_handler,
-                response["code"],
-                response.get("requirements", []),
-                self.chat_handler.run_generated_code,
-            )
-            self.code_popup.show()
+            self.code_popup.update_with_new_version(code, requirements)
 
     def load_example(self):
         example = show_example_dialog(self)
@@ -300,10 +300,17 @@ class ChatWindow(QMainWindow):
             self.close()
 
     def closeEvent(self, event):
-        self.cost_tracker.print_summary()
-        if self.code_popup:
-            self.code_popup.close()
-        super().closeEvent(event)
+        # Perform cleanup
+        if hasattr(self, "code_popup") and self.code_popup:
+            self.code_popup.terminal_manager.cleanup()
+
+        # Use a timer to allow for a short delay before closing
+        QTimer.singleShot(1000, self.force_close)
+        event.ignore()  # Prevent immediate closure
+
+    def force_close(self):
+        # Force close the application
+        QApplication.quit()
 
     def sigint_handler(self, *args):
         QApplication.quit()

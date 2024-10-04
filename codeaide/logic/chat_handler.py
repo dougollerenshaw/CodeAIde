@@ -24,13 +24,14 @@ from codeaide.utils.file_handler import FileHandler
 from codeaide.utils.terminal_manager import TerminalManager
 from codeaide.utils.general_utils import generate_session_id
 from codeaide.utils.logging_config import get_logger, setup_logger
-from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtWidgets import QMessageBox, QTextEdit
+from PyQt5.QtGui import QFont
+from PyQt5.QtCore import QObject, QMetaObject, Qt, Q_ARG, pyqtSlot
 
-logger = get_logger()
 
-
-class ChatHandler:
+class ChatHandler(QObject):
     def __init__(self):
+        super().__init__()
         """
         Initialize the ChatHandler class.
 
@@ -48,8 +49,9 @@ class ChatHandler:
         )  # Store the specific session directory
         self.logger = get_logger()
         self.conversation_history = self.file_handler.load_chat_history()
-        self.env_manager = EnvironmentManager()
-        self.terminal_manager = TerminalManager()
+        self.terminal_manager = TerminalManager(
+            traceback_callback=self.show_traceback_dialog
+        )
         self.latest_version = "0.0"
         self.api_client = None
         self.api_key_set = False
@@ -62,6 +64,7 @@ class ChatHandler:
         self.api_key_valid, self.api_key_message = self.check_api_key()
         self.logger.info(f"New session started with ID: {self.session_id}")
         self.logger.info(f"Session directory: {self.session_dir}")
+        self.main_window = None  # We'll set this later
 
     def check_api_key(self):
         """
@@ -461,28 +464,7 @@ class ChatHandler:
             project_root, self.file_handler.session_dir, requirements
         )
 
-        activation_command = self.env_manager.get_activation_command()
-        new_packages = self.env_manager.install_requirements(req_path)
-
-        script_content = f"""
-        clear # Clear the terminal
-        echo "Activating environment..."
-        {activation_command}
-        """
-
-        if new_packages:
-            script_content += 'echo "New dependencies installed:"\n'
-            for package in new_packages:
-                script_content += f'echo "  - {package}"\n'
-
-        script_content += f"""
-        echo "Running {filename}..."
-        python "{script_path}"
-        
-        echo "Script execution completed."
-        """
-
-        self.terminal_manager.run_in_terminal(script_content)
+        self.terminal_manager.run_script(script_path, req_path)
 
     def is_task_in_progress(self):
         """
@@ -539,10 +521,10 @@ class ChatHandler:
         self.latest_version = version
 
     def start_new_session(self, chat_window):
-        logger.info("Starting new session")
+        self.logger.info("Starting new session")
 
         # Log the previous session path correctly
-        logger.info(f"Previous session path: {self.session_dir}")
+        self.logger.info(f"Previous session path: {self.session_dir}")
 
         # Generate new session ID
         new_session_id = generate_session_id()
@@ -573,12 +555,12 @@ class ChatHandler:
         chat_window.add_to_chat("System", system_message)
         chat_window.add_to_chat("AI", INITIAL_MESSAGE)
 
-        logger.info(f"New session started with ID: {self.session_id}")
-        logger.info(f"New session directory: {self.session_dir}")
+        self.logger.info(f"New session started with ID: {self.session_id}")
+        self.logger.info(f"New session directory: {self.session_dir}")
 
     # New method to load a previous session
     def load_previous_session(self, session_id, chat_window):
-        logger.info(f"Loading previous session: {session_id}")
+        self.logger.info(f"Loading previous session: {session_id}")
         self.session_id = session_id
         self.file_handler = FileHandler(session_id=session_id)
         self.session_dir = self.file_handler.session_dir
@@ -586,4 +568,62 @@ class ChatHandler:
         # Load chat contents
         chat_window.load_chat_contents()
 
-        logger.info(f"Loaded previous session with ID: {self.session_id}")
+        self.logger.info(f"Loaded previous session with ID: {self.session_id}")
+
+    def set_main_window(self, main_window):
+        self.main_window = main_window
+        self.logger.info(f"Main window set: {self.main_window}")
+
+    def show_traceback_dialog(self, traceback_text):
+        self.logger.info(f"show_traceback_dialog called with: {traceback_text}")
+        if self.main_window:
+            QMetaObject.invokeMethod(
+                self,
+                "_display_traceback_dialog",
+                Qt.QueuedConnection,
+                Q_ARG(str, traceback_text),
+            )
+        else:
+            self.logger.info("self.main_window is None")
+
+    @pyqtSlot(str)
+    def _display_traceback_dialog(self, traceback_text):
+        self.logger.info(f"_display_traceback_dialog called with: {traceback_text}")
+        msg_box = QMessageBox(self.main_window)
+        msg_box.setWindowTitle("Error Detected")
+        msg_box.setText("An error was detected in the running script:")
+        msg_box.setInformativeText(traceback_text)
+        msg_box.setIcon(QMessageBox.Warning)
+
+        # Create custom buttons
+        send_button = msg_box.addButton("Request a fix", QMessageBox.ActionRole)
+        ignore_button = msg_box.addButton("Ignore", QMessageBox.RejectRole)
+
+        # Set a fixed width for the dialog
+        msg_box.setFixedWidth(600)
+
+        # Make the dialog resizable
+        msg_box.setSizeGripEnabled(True)
+
+        # Set a monospace font for the traceback text
+        text_browser = msg_box.findChild(QTextEdit)
+        if text_browser:
+            font = QFont("Courier")
+            font.setStyleHint(QFont.Monospace)
+            font.setFixedPitch(True)
+            font.setPointSize(10)
+            text_browser.setFont(font)
+
+        msg_box.exec_()
+
+        if msg_box.clickedButton() == send_button:
+            self.send_traceback_to_agent(traceback_text)
+
+    def send_traceback_to_agent(self, traceback_text):
+        message = (
+            "The following error occurred when running the code you just provided:\n\n"
+            f"```\n{traceback_text}\n```\n\n"
+            "Please provide a solution that avoids this error."
+        )
+        self.main_window.input_text.setPlainText(message)
+        self.main_window.on_submit()
