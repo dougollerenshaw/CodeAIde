@@ -244,7 +244,7 @@ class PythonHighlighter(QSyntaxHighlighter):
 
 class CodePopup(QWidget):
     def __init__(
-        self, parent, file_handler, code, requirements, run_callback, chat_handler=None
+        self, parent, file_handler, code, requirements, run_callback, chat_handler
     ):
         super().__init__(parent, Qt.Window)
         self.setWindowTitle("💻 Generated Code 💻")
@@ -267,15 +267,7 @@ class CodePopup(QWidget):
         )
 
     def safe_show_traceback_dialog(self, traceback_text):
-        if self.chat_handler:
-            self.chat_handler.show_traceback_dialog(traceback_text)
-        else:
-            # Fallback to showing a simple message box if chat_handler is not available
-            QMessageBox.warning(
-                self,
-                "Traceback Detected",
-                f"A traceback was detected:\n\n{traceback_text}",
-            )
+        self.chat_handler.show_traceback_dialog(traceback_text)
 
     def setup_ui(self):
         layout = QVBoxLayout(self)

@@ -58,6 +58,10 @@ class ScriptRunner:
         #!/bin/bash
         echo "{self.START_MARKER}" > {output_file_path}
         python -u {self.script_path} 2>&1 | tee -a {output_file_path}
+        EXIT_CODE=$?
+        if [ $EXIT_CODE -ne 0 ]; then
+            echo "ERROR: Script exited with code $EXIT_CODE" >> {output_file_path}
+        fi
         echo "{self.END_MARKER}" >> {output_file_path}
         echo "Script execution completed. You can close this window."
         """
@@ -114,15 +118,30 @@ class ScriptRunner:
 
         if "Traceback (most recent call last):" in line:
             self.traceback_buffer = [line]
+        elif (
+            "SyntaxError:" in line
+            or "IndentationError:" in line
+            or "ERROR: Script exited with code" in line
+        ):
+            self.traceback_buffer = [line]
+            self.show_traceback_if_any()
         elif self.traceback_buffer:
             self.traceback_buffer.append(line)
-            if line.startswith(("AttributeError:", "TypeError:", "ValueError:")):
+            if line.startswith(
+                (
+                    "AttributeError:",
+                    "TypeError:",
+                    "ValueError:",
+                    "NameError:",
+                    "ZeroDivisionError:",
+                )
+            ):
                 self.show_traceback_if_any()
 
     def show_traceback_if_any(self):
         if self.traceback_buffer:
             traceback_text = "\n".join(self.traceback_buffer)
-            self.logger.info("\nTRACEBACK DETECTED:")
+            self.logger.info("\nERROR DETECTED:")
             self.logger.info("-----------------------")
             self.logger.info(traceback_text)
             self.logger.info("-----------------------")

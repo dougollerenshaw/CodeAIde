@@ -273,7 +273,7 @@ class ChatWindow(QMainWindow):
                 code,
                 requirements,
                 self.chat_handler.run_generated_code,
-                chat_handler=self.chat_handler,  # Pass chat_handler explicitly
+                chat_handler=self.chat_handler,
             )
         else:
             self.code_popup.update_with_new_version(code, requirements)
