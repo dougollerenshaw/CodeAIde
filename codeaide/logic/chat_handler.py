@@ -26,11 +26,19 @@ from codeaide.utils.general_utils import generate_session_id
 from codeaide.utils.logging_config import get_logger, setup_logger
 from PyQt5.QtWidgets import QMessageBox, QTextEdit
 from PyQt5.QtGui import QFont
-from PyQt5.QtCore import QObject, QMetaObject, Qt, Q_ARG, pyqtSlot
+from PyQt5.QtCore import QObject, QMetaObject, Qt, Q_ARG, pyqtSlot, pyqtSignal
 from codeaide.ui.chat_window import ChatWindow
+from codeaide.ui.traceback_dialog import TracebackDialog
 
 
 class ChatHandler(QObject):
+    # Define custom signals for updating the chat and showing code
+    update_chat_signal = pyqtSignal(
+        str, str
+    )  # Signal to update chat with (role, message)
+    show_code_signal = pyqtSignal(str, str)  # Signal to show code with (code, version)
+    traceback_occurred = pyqtSignal(str)
+
     def __init__(self):
         super().__init__()
         """
@@ -69,7 +77,12 @@ class ChatHandler(QObject):
 
     def start_application(self):
         self.chat_window = ChatWindow(self)
+        self.connect_signals()
         self.chat_window.show()
+
+    def connect_signals(self):
+        self.update_chat_signal.connect(self.chat_window.add_to_chat)
+        self.show_code_signal.connect(self.chat_window.show_code)
 
     def check_api_key(self):
         """
@@ -577,52 +590,12 @@ class ChatHandler(QObject):
 
     def set_main_window(self, main_window):
         # This method can be removed later, but keep it for now to avoid breaking existing code
-        self.chat_window = main_window
+        if self.chat_window is None:
+            self.chat_window = main_window
 
     def show_traceback_dialog(self, traceback_text):
-        self.logger.info(f"show_traceback_dialog called with: {traceback_text}")
-        if self.chat_window:
-            QMetaObject.invokeMethod(
-                self,
-                "_display_traceback_dialog",
-                Qt.QueuedConnection,
-                Q_ARG(str, traceback_text),
-            )
-        else:
-            self.logger.info("self.chat_window is None")
-
-    @pyqtSlot(str)
-    def _display_traceback_dialog(self, traceback_text):
-        self.logger.info(f"_display_traceback_dialog called with: {traceback_text}")
-        msg_box = QMessageBox(self.chat_window)
-        msg_box.setWindowTitle("Error Detected")
-        msg_box.setText("An error was detected in the running script:")
-        msg_box.setInformativeText(traceback_text)
-        msg_box.setIcon(QMessageBox.Warning)
-
-        # Create custom buttons
-        send_button = msg_box.addButton("Request a fix", QMessageBox.ActionRole)
-        ignore_button = msg_box.addButton("Ignore", QMessageBox.RejectRole)
-
-        # Set a fixed width for the dialog
-        msg_box.setFixedWidth(600)
-
-        # Make the dialog resizable
-        msg_box.setSizeGripEnabled(True)
-
-        # Set a monospace font for the traceback text
-        text_browser = msg_box.findChild(QTextEdit)
-        if text_browser:
-            font = QFont("Courier")
-            font.setStyleHint(QFont.Monospace)
-            font.setFixedPitch(True)
-            font.setPointSize(10)
-            text_browser.setFont(font)
-
-        msg_box.exec_()
-
-        if msg_box.clickedButton() == send_button:
-            self.send_traceback_to_agent(traceback_text)
+        self.logger.info(f"Traceback occurred: {traceback_text}")
+        self.traceback_occurred.emit(traceback_text)
 
     def send_traceback_to_agent(self, traceback_text):
         message = (

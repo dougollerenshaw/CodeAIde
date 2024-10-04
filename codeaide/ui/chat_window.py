@@ -39,6 +39,7 @@ from codeaide.utils.constants import (
     MODEL_SWITCH_MESSAGE,
 )
 from codeaide.utils.logging_config import get_logger
+from codeaide.ui.traceback_dialog import TracebackDialog
 
 
 class ChatWindow(QMainWindow):
@@ -48,6 +49,7 @@ class ChatWindow(QMainWindow):
         self.setWindowTitle("🤖 CodeAIde 🤖")
         self.setGeometry(0, 0, CHAT_WINDOW_WIDTH, CHAT_WINDOW_HEIGHT)
         self.chat_handler = chat_handler
+        self.chat_handler.traceback_occurred.connect(self.show_traceback_dialog)
         self.cost_tracker = getattr(chat_handler, "cost_tracker", None)
         self.code_popup = None
         self.waiting_for_api_key = False
@@ -398,3 +400,24 @@ class ChatWindow(QMainWindow):
         for item in self.chat_contents:
             self.add_to_chat(item["sender"], item["message"])
         self.logger.info(f"Loaded {len(self.chat_contents)} messages from chat log")
+
+    def show_code(self, code, version):
+        if not self.code_popup:
+            self.code_popup = CodePopup(
+                self,
+                self.chat_handler.file_handler,
+                code,
+                [],
+                self.chat_handler.run_generated_code,
+                chat_handler=self.chat_handler,
+            )
+        else:
+            self.code_popup.update_with_new_version(code, [])
+        self.code_popup.show()
+        self.code_popup.raise_()
+        self.code_popup.activateWindow()
+
+    def show_traceback_dialog(self, traceback_text):
+        dialog = TracebackDialog(self, traceback_text)
+        if dialog.exec_():
+            self.chat_handler.send_traceback_to_agent(traceback_text)
