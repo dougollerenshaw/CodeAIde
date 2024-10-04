@@ -11,3 +11,5 @@ isort
 pre-commit
 pyqt5
 pygments
+flake8
+flake8-unused-arguments
