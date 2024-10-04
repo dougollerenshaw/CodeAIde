@@ -39,6 +39,7 @@ from codeaide.utils.constants import (
     MODEL_SWITCH_MESSAGE,
 )
 from codeaide.utils.logging_config import get_logger
+from codeaide.ui.traceback_dialog import TracebackDialog
 
 
 class ChatWindow(QMainWindow):
@@ -160,15 +161,18 @@ class ChatWindow(QMainWindow):
 
     def on_submit(self):
         user_input = self.input_text.toPlainText().strip()
+        self.logger.info(
+            f"ChatWindow: on_submit called with input: {user_input[:50]}..."
+        )
         if not user_input:
+            self.logger.info("ChatWindow: Empty input, returning")
             return
 
-        self.logger.info(f"User input: {user_input}")
-
-        # Clear the input field immediately
+        self.logger.info(f"ChatWindow: Processing user input")
         self.input_text.clear()
 
         if self.waiting_for_api_key:
+            self.logger.info("ChatWindow: Handling API key input")
             (
                 success,
                 message,
@@ -179,17 +183,21 @@ class ChatWindow(QMainWindow):
             if success:
                 self.enable_ui_elements()
         else:
-            # Immediately display user input and "Thinking..." message
+            self.logger.info("ChatWindow: Adding user input to chat")
             self.add_to_chat("User", user_input)
             self.disable_ui_elements()
             self.add_to_chat("AI", "Thinking... 🤔")
-
-            # Use QTimer to process the input after the UI has updated
+            self.logger.info("ChatWindow: Scheduling call_process_input_async")
             QTimer.singleShot(100, lambda: self.call_process_input_async(user_input))
 
     def call_process_input_async(self, user_input):
-        # Process the input
+        self.logger.info(
+            f"ChatWindow: call_process_input_async called with input: {user_input[:50]}..."
+        )
         response = self.chat_handler.process_input(user_input)
+        self.logger.info(
+            f"ChatWindow: Received response from chat handler: {str(response)[:50]}..."
+        )
         self.handle_response(response)
 
     def on_modify(self):
@@ -270,6 +278,7 @@ class ChatWindow(QMainWindow):
             self.code_popup = CodePopup(
                 self,
                 self.chat_handler.file_handler,
+                self.chat_handler.terminal_manager,
                 code,
                 requirements,
                 self.chat_handler.run_generated_code,
@@ -398,3 +407,31 @@ class ChatWindow(QMainWindow):
         for item in self.chat_contents:
             self.add_to_chat(item["sender"], item["message"])
         self.logger.info(f"Loaded {len(self.chat_contents)} messages from chat log")
+
+    def show_code(self, code, version):
+        if not self.code_popup:
+            self.code_popup = CodePopup(
+                self,
+                self.chat_handler.file_handler,
+                code,
+                [],
+                self.chat_handler.run_generated_code,
+                chat_handler=self.chat_handler,
+            )
+        else:
+            self.code_popup.update_with_new_version(code, [])
+        self.code_popup.show()
+        self.code_popup.raise_()
+        self.code_popup.activateWindow()
+
+    def show_traceback_dialog(self, traceback_text):
+        self.logger.info(
+            f"ChatWindow: show_traceback_dialog called with text: {traceback_text[:50]}..."
+        )
+        dialog = TracebackDialog(self, traceback_text)
+        self.logger.info("ChatWindow: Showing TracebackDialog")
+        if dialog.exec_():
+            self.logger.info("ChatWindow: User requested to fix the traceback")
+            self.chat_handler.send_traceback_to_agent(traceback_text)
+        else:
+            self.logger.info("ChatWindow: User chose to ignore the traceback")
