@@ -118,23 +118,27 @@ class ScriptRunner:
 
         if "Traceback (most recent call last):" in line:
             self.traceback_buffer = [line]
-        elif (
-            "SyntaxError:" in line
-            or "IndentationError:" in line
-            or "ERROR: Script exited with code" in line
+        elif any(
+            error in line
+            for error in [
+                "SyntaxError:",
+                "IndentationError:",
+                "ERROR: Script exited with code",
+            ]
         ):
             self.traceback_buffer = [line]
             self.show_traceback_if_any()
         elif self.traceback_buffer:
             self.traceback_buffer.append(line)
-            if line.startswith(
-                (
+            if any(
+                line.startswith(error)
+                for error in [
                     "AttributeError:",
                     "TypeError:",
                     "ValueError:",
                     "NameError:",
                     "ZeroDivisionError:",
-                )
+                ]
             ):
                 self.show_traceback_if_any()
 
@@ -184,35 +188,10 @@ class TerminalManager:
         self.runners.append(runner)
         runner.start()
 
-        # Start a thread to monitor the output
-        threading.Thread(
-            target=self._monitor_runner, args=(runner,), daemon=True
-        ).start()
-
     def _install_requirements(self, requirements_path):
         subprocess.run(
             [sys.executable, "-m", "pip", "install", "-r", requirements_path]
         )
-
-    def _monitor_runner(self, runner):
-        while runner.is_running:
-            for output in runner.get_output():
-                self.logger.info(output)
-                if "Traceback (most recent call last):" in output:
-                    print("Traceback detected, calling callback")  # Debug print
-                    if self.traceback_callback:
-                        # Call the callback with the full traceback, not just the first line
-                        full_traceback = output
-                        while (
-                            "Traceback (most recent call last):" in output
-                            or not output.strip()
-                        ):
-                            output = next(runner.get_output(), "").strip()
-                            full_traceback += "\n" + output
-                        self.traceback_callback(full_traceback)
-                    else:
-                        print("No traceback callback set")  # Debug print
-            time.sleep(0.1)
 
     def cleanup(self):
         for runner in self.runners:
