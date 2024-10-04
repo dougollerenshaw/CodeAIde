@@ -1,5 +1,4 @@
-import sys
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 import pytest
 import logging
 import os
@@ -10,7 +9,6 @@ from PyQt5.QtCore import Qt, QTimer
 
 from codeaide.ui.chat_window import ChatWindow
 from codeaide.logic.chat_handler import ChatHandler
-from codeaide.utils import general_utils
 from codeaide.utils.constants import (
     AI_PROVIDERS,
     DEFAULT_PROVIDER,

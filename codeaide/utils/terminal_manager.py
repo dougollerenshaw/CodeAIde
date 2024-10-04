@@ -2,12 +2,10 @@ import atexit
 import os
 import subprocess
 import sys
-import tempfile
 import threading
 import logging
 import queue
 import time
-import re
 from codeaide.utils.environment_manager import EnvironmentManager
 
 

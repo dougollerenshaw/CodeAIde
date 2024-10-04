@@ -3,7 +3,6 @@ from collections import namedtuple
 from unittest.mock import Mock, patch
 
 import pytest
-import anthropic
 from anthropic import APIError
 
 from codeaide.utils.api_utils import (
@@ -11,7 +10,6 @@ from codeaide.utils.api_utils import (
     parse_response,
     send_api_request,
     get_api_client,
-    MissingAPIKeyException,
 )
 from codeaide.utils.constants import (
     DEFAULT_MODEL,
@@ -569,7 +567,7 @@ class TestAPIConnection:
 
         result = check_api_connection()
 
-        assert result[0] == True
+        assert result[0] is True
         assert result[1] == "Yes, we are communicating."
 
     @patch("codeaide.utils.api_utils.get_api_client")
@@ -586,7 +584,7 @@ class TestAPIConnection:
 
         result = check_api_connection()
 
-        assert result[0] == False
+        assert result[0] is False
         assert "Connection failed" in result[1]
 
     @patch("codeaide.utils.api_utils.get_api_client")
@@ -601,5 +599,5 @@ class TestAPIConnection:
 
         result = check_api_connection()
 
-        assert result[0] == False
+        assert result[0] is False
         assert result[1] == "API key is missing or invalid"

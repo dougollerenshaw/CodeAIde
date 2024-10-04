@@ -1,6 +1,5 @@
 import os
 import subprocess
-import sys
 import venv
 from codeaide.utils.logging_config import get_logger
 
