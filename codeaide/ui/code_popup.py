@@ -34,7 +34,6 @@ from codeaide.utils.constants import (
     CODE_WINDOW_HEIGHT,
     CODE_WINDOW_WIDTH,
 )
-from codeaide.utils.terminal_manager import TerminalManager
 
 
 class LineNumberArea(QWidget):
@@ -245,12 +244,20 @@ class PythonHighlighter(QSyntaxHighlighter):
 
 class CodePopup(QDialog):
     def __init__(
-        self, parent, file_handler, code, requirements, run_callback, chat_handler
+        self,
+        parent,
+        file_handler,
+        terminal_manager,
+        code,
+        requirements,
+        run_callback,
+        chat_handler,
     ):
         super().__init__(parent)
         self.setWindowTitle("💻 Generated Code 💻")
         self.resize(CODE_WINDOW_WIDTH, CODE_WINDOW_HEIGHT)
         self.file_handler = file_handler
+        self.terminal_manager = terminal_manager
         self.run_callback = run_callback
         self.setup_ui()
         self.load_versions()
@@ -261,18 +268,6 @@ class CodePopup(QDialog):
 
         # Use the chat_handler passed as an argument, or try to get it from the parent
         self.chat_handler = chat_handler or (parent.chat_handler if parent else None)
-
-        # Create TerminalManager with a safe traceback callback
-        self.terminal_manager = TerminalManager(
-            traceback_callback=self.safe_show_traceback_dialog
-        )
-
-    def safe_show_traceback_dialog(self, traceback_text):
-        if self.chat_handler:
-            # Change this line
-            self.chat_handler.emit_traceback_signal(traceback_text)
-        else:
-            self.logger.error("ChatHandler not available for showing traceback dialog")
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
@@ -375,7 +370,6 @@ class CodePopup(QDialog):
         with open(req_path, "w") as f:
             f.write("\n".join(requirements))
 
-        # Assuming you have a TerminalManager instance available as self.terminal_manager
         self.terminal_manager.run_script(code_path, req_path)
 
     def on_copy_code(self):

@@ -58,7 +58,7 @@ class ChatHandler(QObject):
         self.logger = get_logger()
         self.conversation_history = self.file_handler.load_chat_history()
         self.terminal_manager = TerminalManager(
-            traceback_callback=self.emit_traceback_signal  # Change this line
+            traceback_callback=self.emit_traceback_signal
         )
         self.latest_version = "0.0"
         self.api_client = None

@@ -49,7 +49,6 @@ class ChatWindow(QMainWindow):
         self.setWindowTitle("🤖 CodeAIde 🤖")
         self.setGeometry(0, 0, CHAT_WINDOW_WIDTH, CHAT_WINDOW_HEIGHT)
         self.chat_handler = chat_handler
-        self.chat_handler.traceback_occurred.connect(self.show_traceback_dialog)
         self.cost_tracker = getattr(chat_handler, "cost_tracker", None)
         self.code_popup = None
         self.waiting_for_api_key = False
@@ -279,6 +278,7 @@ class ChatWindow(QMainWindow):
             self.code_popup = CodePopup(
                 self,
                 self.chat_handler.file_handler,
+                self.chat_handler.terminal_manager,
                 code,
                 requirements,
                 self.chat_handler.run_generated_code,
