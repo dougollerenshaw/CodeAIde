@@ -47,8 +47,9 @@ class ChatHandler:
         )  # Store the specific session directory
         self.logger = get_logger()
         self.conversation_history = self.file_handler.load_chat_history()
-        self.env_manager = EnvironmentManager()
-        self.terminal_manager = TerminalManager()
+        self.terminal_manager = TerminalManager(
+            traceback_callback=self.show_traceback_dialog
+        )
         self.latest_version = "0.0"
         self.api_client = None
         self.api_key_set = False
@@ -461,30 +462,7 @@ class ChatHandler:
             project_root, self.file_handler.session_dir, requirements
         )
 
-        activation_command = self.env_manager.get_activation_command()
-        new_packages = self.env_manager.install_requirements(req_path)
-
-        script_content = f"""
-        clear # Clear the terminal
-        echo "Activating environment..."
-        {activation_command}
-        """
-
-        if new_packages:
-            script_content += 'echo "New dependencies installed:"\n'
-            for package in new_packages:
-                script_content += f'echo "  - {package}"\n'
-
-        script_content += f"""
-        echo "Running {filename}..."
-        python "{script_path}"
-        
-        echo "Script execution completed."
-        """
-
-        process = self.terminal_manager.run_in_terminal(script_content)
-
-        return process
+        self.terminal_manager.run_script(script_path, req_path)
 
     def is_task_in_progress(self):
         """

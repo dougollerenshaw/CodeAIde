@@ -8,13 +8,16 @@ import logging
 import queue
 import time
 import re
+from codeaide.utils.environment_manager import EnvironmentManager
 
 
 class ScriptRunner:
-    def __init__(self, script_path, window_name, traceback_callback=None):
-        self.script_path = script_path
-        self.script_name = os.path.basename(script_path)
+    def __init__(
+        self, script_content, window_name, script_name, traceback_callback=None
+    ):
+        self.script_content = script_content
         self.window_name = window_name
+        self.script_name = script_name
         self.is_running = False
         self.output_queue = queue.Queue()
         self.traceback_buffer = []
@@ -57,7 +60,9 @@ class ScriptRunner:
         bash_script_content = f"""
         #!/bin/bash
         echo "{self.START_MARKER}" > {output_file_path}
-        python -u {self.script_path} 2>&1 | tee -a {output_file_path}
+        {{
+        {self.script_content}
+        }} 2>&1 | tee -a {output_file_path}
         EXIT_CODE=$?
         if [ $EXIT_CODE -ne 0 ]; then
             echo "ERROR: Script exited with code $EXIT_CODE" >> {output_file_path}
@@ -173,20 +178,50 @@ class TerminalManager:
         self.runners = []
         self.logger = logging.getLogger(__name__)
         self.traceback_callback = traceback_callback
+        self.env_manager = EnvironmentManager()
         atexit.register(self.cleanup)
 
     def run_script(self, script_path, requirements_path):
         # Install requirements
-        self._install_requirements(requirements_path)
+        new_packages = self.env_manager.install_requirements(requirements_path)
+
+        # Get activation command
+        activation_command = self.env_manager.get_activation_command()
+
+        # Create the script content
+        script_content = self._create_script_content(
+            script_path, activation_command, new_packages
+        )
 
         # Create and start a new ScriptRunner
         runner = ScriptRunner(
-            script_path,
+            script_content,
             f"Terminal Window {len(self.runners) + 1}",
+            os.path.basename(script_path),
             self.traceback_callback,
         )
         self.runners.append(runner)
         runner.start()
+
+    def _create_script_content(self, script_path, activation_command, new_packages):
+        script_name = os.path.basename(script_path)
+        script_content = f"""
+        clear # Clear the terminal
+        echo "Activating environment..."
+        {activation_command}
+        """
+
+        if new_packages:
+            script_content += 'echo "New dependencies installed:"\n'
+            for package in new_packages:
+                script_content += f'echo "  - {package}"\n'
+
+        script_content += f"""
+        echo "Running {script_name}..."
+        python "{script_path}"
+        echo "Script execution completed."
+        """
+        return script_content
 
     def _install_requirements(self, requirements_path):
         subprocess.run(
