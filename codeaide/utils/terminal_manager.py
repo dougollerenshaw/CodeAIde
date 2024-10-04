@@ -150,12 +150,11 @@ class ScriptRunner:
     def show_traceback_if_any(self):
         if self.traceback_buffer:
             traceback_text = "\n".join(self.traceback_buffer)
-            self.logger.info("\nERROR DETECTED:")
-            self.logger.info("-----------------------")
-            self.logger.info(traceback_text)
-            self.logger.info("-----------------------")
+            self.logger.info(
+                f"ScriptRunner: Traceback detected: {traceback_text[:50]}..."
+            )
             if self.traceback_callback:
-                self.logger.info("Calling traceback callback")
+                self.logger.info("ScriptRunner: Calling traceback callback")
                 self.traceback_callback(traceback_text)
             self.traceback_buffer = []
 

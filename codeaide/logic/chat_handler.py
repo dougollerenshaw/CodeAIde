@@ -593,14 +593,21 @@ class ChatHandler(QObject):
         self.logger.info(f"Loaded previous session with ID: {self.session_id}")
 
     def emit_traceback_signal(self, traceback_text):
-        self.logger.info("Emitting traceback signal")
+        self.logger.info(
+            f"ChatHandler: Emitting traceback signal with text: {traceback_text[:50]}..."
+        )
         self.traceback_occurred.emit(traceback_text)
 
     def send_traceback_to_agent(self, traceback_text):
+        self.logger.info(
+            f"ChatHandler: Sending traceback to agent: {traceback_text[:50]}..."
+        )
         message = (
             "The following error occurred when running the code you just provided:\n\n"
             f"```\n{traceback_text}\n```\n\n"
             "Please provide a solution that avoids this error."
         )
+        self.logger.info(f"ChatHandler: Setting input text in chat window")
         self.chat_window.input_text.setPlainText(message)
+        self.logger.info(f"ChatHandler: Calling on_submit in chat window")
         self.chat_window.on_submit()
