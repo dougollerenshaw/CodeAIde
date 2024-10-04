@@ -1,23 +1,24 @@
 # CodeAIde
 
-CodeAIde is an AI-powered coding assistant that helps developers write, test, and optimize code through natural language interactions. By leveraging the power of large language models, CodeAIde aims to streamline the coding process and boost productivity.
+CodeAIde is an AI-powered coding assistant that automates the process of writing and running code with natural language interactions. This tool wraps around an LLM API client so that you can interact with the LLM in a chat window to request code or changes to previously generated code. Users can then execute the code directly from the application without the need to manage environments, install dependencies, etc. Errors in the code execution are caught automatically and users have the option to share the error with the LLM to request a fix.
 
-This is designed to be a simple, intuitive tool for writing, running, and refining simple Python scripts. It is not meant to be a full IDE or code editing environment and isn't a replacement for a tool like Cursor or Github Copilot. Instead, it is intended to be a simple tool for quickly writing code and getting it working without the need to worry about setting up environments, installing dependencies, etc.
+This is designed to be a simple, intuitive tool for writing, running, and refining simple Python scripts. It is not meant to be a full IDE or code editing environment and isn't a replacement for a tool like Cursor or the Github Copilot extension in VSCode. Instead, it is intended to be a simple tool for quickly writing code and getting it working without the need to worry about setting up environments, installing dependencies, etc. This is ideal for simple tasks and for beginners who want to try out an idea without the need to set up a complex development environment.
+
+Currently, CodeAIde supports OpenAI and Anthropic APIs. Users can select the model provider and the specific model in the chat window. The chat agent will prompt the user to enter the associated API key if it is not already set in the `.env` file.
 
 ## Features
 
 - Natural language code generation
 - Support for OpenAI and Anthropic APIs
-- Interactive clarification process for precise code output
 - Version control for generated code
 - Local code execution and testing
-- Cost tracking for API usage (not yet implemented)
+- Automatic error handling and sharing with LLM for fixes
 
 ## Examples
 
 Here are some example videos demonstrating use. Example prompts can be accessed by clicking "Use Example" and selecting from available examples.
 
-First, a simple matplotlib plot with followup requests to modify aesthetics.  
+First, a simple matplotlib plot with followup requests to modify aesthetics.
 
 https://github.com/user-attachments/assets/8aa729ff-c431-4a61-a9ef-d17050a27d02
 
@@ -89,14 +90,14 @@ Claude says: Yes, we are communicating! I'm Claude, an AI assistant. How can I h
 The following features do not currently exist, but adding them in the future would make this project more useful:
 
 * Support for more code languages. Currently only Python is supported. Additional language support would require backend support for automatically compiling/running generated code in that language.
-* Additional LLM APIs. Currently only Anthropic's API and the Claude Sonnet 3.5 model is supported. Supporting additional models from Anthropic (including smaller models with lower API costs) and/or including support for different organizations (e.g. OpenAI) might be useful.
 * Chat history support. Currently, when a session ends, the chat history is lost. Ideally it would be possible to keep the chat history and associated code and make it searchable across sessions.
 * API usage tracking. The API messages contain information with the number of prompt and response tokens. We can track these during a session to estimate the total cost of all API requests.
-* Automatic uploading of errors. Currently, if the code fails to run, you'll need to share the traceback in the chat to get a solution. Ideally code failures could be caught and automatically shared, prompting the LLM to provide a solution without the need to cut/paste anything.
 
 ## Contributing
 
 Contributions to CodeAIde are welcome! Please feel free to submit a Pull Request.
+
+## Building a standalone application
 
 For detailed instructions on how to build CodeAide as a standalone application, please refer to the [BUILD.md](BUILD.md) file in the root of this repository.
 
