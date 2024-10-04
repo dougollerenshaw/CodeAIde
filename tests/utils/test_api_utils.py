@@ -89,11 +89,8 @@ class TestGetApiClient:
         Various test methods to cover different scenarios for get_api_client function.
     """
 
-    @patch("codeaide.utils.api_utils.config")
     @patch("codeaide.utils.api_utils.AutoConfig")
-    def test_get_api_client_missing_key(
-        self, mock_auto_config, mock_config, monkeypatch
-    ):
+    def test_get_api_client_missing_key(self, mock_auto_config):
         """
         Test the behavior of get_api_client when the API key is missing.
 
@@ -102,23 +99,22 @@ class TestGetApiClient:
 
         Args:
             mock_auto_config (MagicMock): A mock object for the AutoConfig class.
-            mock_config (MagicMock): A mock object for the config function.
-            monkeypatch (pytest.MonkeyPatch): Pytest fixture for modifying the test environment.
 
         The test performs the following steps:
-        1. Mocks the config function to return None, simulating a missing API key.
-        2. Sets up the mock AutoConfig to use the mocked config function.
-        3. Removes the ANTHROPIC_API_KEY from the environment variables.
-        4. Calls get_api_client with the "anthropic" provider.
-        5. Asserts that the returned client is None, as expected when the API key is missing.
+        1. Mocks the AutoConfig to return None, simulating a missing API key.
+        2. Calls get_api_client with the "anthropic" provider.
+        3. Asserts that the returned client is None, as expected when the API key is missing.
         """
+        mock_config = Mock()
         mock_config.return_value = None
         mock_auto_config.return_value = mock_config
-        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
         client = get_api_client(provider="anthropic")
         assert client is None
 
-    def test_get_api_client_success(self, monkeypatch):
+    @patch("codeaide.utils.api_utils.AutoConfig")
+    @patch("anthropic.Anthropic")
+    def test_get_api_client_success(self, mock_anthropic, mock_auto_config):
         """
         Test the successful creation of an API client for Anthropic.
 
@@ -126,20 +122,29 @@ class TestGetApiClient:
         an Anthropic API client when a valid API key is provided in the environment.
 
         Args:
-            monkeypatch (pytest.MonkeyPatch): Pytest fixture for modifying the test environment.
+            mock_anthropic (MagicMock): A mock object for the Anthropic class.
+            mock_auto_config (MagicMock): A mock object for the AutoConfig class.
 
         The test performs the following steps:
-        1. Sets the ANTHROPIC_API_KEY environment variable to a test value.
-        2. Calls get_api_client with the "anthropic" provider.
-        3. Asserts that the returned client is not None.
-        4. Verifies that the client has a 'messages' attribute, which is expected for Anthropic clients.
+        1. Mocks the AutoConfig to return a test API key.
+        2. Mocks the Anthropic class to return a mock client.
+        3. Calls get_api_client with the "anthropic" provider.
+        4. Asserts that the returned client is not None.
+        5. Verifies that the client is the same as the mock client.
         """
-        monkeypatch.setenv("ANTHROPIC_API_KEY", "test_key")
+        mock_config = Mock()
+        mock_config.return_value = "test_key"
+        mock_auto_config.return_value = mock_config
+
+        mock_client = Mock()
+        mock_anthropic.return_value = mock_client
+
         client = get_api_client(provider="anthropic")
         assert client is not None
-        assert hasattr(client, "messages")
+        assert client == mock_client
 
-    def test_get_api_client_empty_key(self, monkeypatch):
+    @patch("codeaide.utils.api_utils.AutoConfig")
+    def test_get_api_client_empty_key(self, mock_auto_config):
         """
         Test the behavior of get_api_client when the API key is empty.
 
@@ -147,14 +152,17 @@ class TestGetApiClient:
         ANTHROPIC_API_KEY is set to an empty string in the environment variables.
 
         Args:
-            monkeypatch (pytest.MonkeyPatch): Pytest fixture for modifying the test environment.
+            mock_auto_config (MagicMock): A mock object for the AutoConfig class.
 
         The test performs the following steps:
-        1. Sets the ANTHROPIC_API_KEY environment variable to an empty string.
+        1. Mocks the AutoConfig to return an empty string, simulating an empty API key.
         2. Calls get_api_client with the "anthropic" provider.
         3. Asserts that the returned client is None, as expected when the API key is empty.
         """
-        monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+        mock_config = Mock()
+        mock_config.return_value = ""
+        mock_auto_config.return_value = mock_config
+
         client = get_api_client(provider="anthropic")
         assert client is None
 
