@@ -47,6 +47,8 @@ class ChatWindow(QMainWindow):
         self.waiting_for_api_key = False
         self.chat_contents = []
         self.setup_ui()
+        self.setup_input_placeholder()
+        self.update_submit_button_state()
 
         # Check API key status
         if not self.chat_handler.api_key_valid:
@@ -75,7 +77,7 @@ class ChatWindow(QMainWindow):
         dropdown_widget = QWidget()
         dropdown_layout = QHBoxLayout(dropdown_widget)
         dropdown_layout.setContentsMargins(0, 0, 0, 0)
-        dropdown_layout.setSpacing(5)  # Minimal spacing between items
+        dropdown_layout.setSpacing(5)
 
         # Provider dropdown
         self.provider_dropdown = QComboBox()
@@ -111,7 +113,7 @@ class ChatWindow(QMainWindow):
         self.input_text.setStyleSheet(
             f"background-color: {CHAT_WINDOW_BG}; color: {CHAT_WINDOW_FG}; border: 1px solid #ccc; padding: 5px;"
         )
-        self.input_text.setAcceptRichText(False)  # Add this line
+        self.input_text.setAcceptRichText(False)
         self.input_text.setFont(general_utils.set_font(USER_FONT))
         self.input_text.setFixedHeight(100)
         self.input_text.textChanged.connect(self.on_modify)
@@ -139,6 +141,10 @@ class ChatWindow(QMainWindow):
         main_layout.addLayout(button_layout)
 
         self.logger.info("Chat window UI initialized")
+
+    def setup_input_placeholder(self):
+        self.placeholder_text = "Enter text here..."
+        self.input_text.setPlaceholderText(self.placeholder_text)
 
     def eventFilter(self, obj, event):
         if obj == self.input_text and event.type() == event.KeyPress:
@@ -183,6 +189,8 @@ class ChatWindow(QMainWindow):
             self.logger.info("ChatWindow: Scheduling call_process_input_async")
             QTimer.singleShot(100, lambda: self.call_process_input_async(user_input))
 
+        self.update_submit_button_state()
+
     def call_process_input_async(self, user_input):
         self.logger.info(
             f"ChatWindow: call_process_input_async called with input: {user_input[:50]}..."
@@ -195,6 +203,12 @@ class ChatWindow(QMainWindow):
 
     def on_modify(self):
         self.input_text.ensureCursorVisible()
+        if self.input_text.toPlainText() == self.placeholder_text:
+            self.input_text.clear()
+            self.input_text.setStyleSheet(
+                f"background-color: {CHAT_WINDOW_BG}; color: {CHAT_WINDOW_FG}; border: 1px solid #ccc; padding: 5px;"
+            )
+        self.update_submit_button_state()
 
     def add_to_chat(self, sender, message):
         color = USER_MESSAGE_COLOR if sender == "User" else AI_MESSAGE_COLOR
@@ -202,11 +216,14 @@ class ChatWindow(QMainWindow):
         sender = AI_EMOJI if sender == "AI" else sender
         html_message = general_utils.format_chat_message(sender, message, font, color)
         self.chat_display.append(html_message + "<br>")
+
+        # Move cursor to the end of the document
+        cursor = self.chat_display.textCursor()
+        cursor.movePosition(cursor.End)
+        self.chat_display.setTextCursor(cursor)
         self.chat_display.ensureCursorVisible()
 
-        self.logger.debug(
-            f"Adding message to chat from {sender}: {message}"
-        )  # Log first 50 chars
+        self.logger.debug(f"Adding message to chat from {sender}: {message}")
 
         # Add message to chat contents
         self.chat_contents.append({"sender": sender, "message": message})
@@ -285,6 +302,7 @@ class ChatWindow(QMainWindow):
         if example:
             self.input_text.setPlainText(example)
             self.input_text.moveCursor(self.input_text.textCursor().End)
+            self.input_text.setFocus()
         else:
             QMessageBox.information(self, "No Selection", "No example was selected.")
 
@@ -307,7 +325,7 @@ class ChatWindow(QMainWindow):
             self.code_popup.terminal_manager.cleanup()
 
         # Use a timer to allow for a short delay before closing
-        QTimer.singleShot(1000, self.force_close)
+        QTimer.singleShot(100, self.force_close)
         event.ignore()  # Prevent immediate closure
 
     def force_close(self):
@@ -424,3 +442,6 @@ class ChatWindow(QMainWindow):
             self.chat_handler.send_traceback_to_agent(traceback_text)
         else:
             self.logger.info("ChatWindow: User chose to ignore the traceback")
+
+    def update_submit_button_state(self):
+        self.submit_button.setEnabled(bool(self.input_text.toPlainText().strip()))
