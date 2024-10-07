@@ -1,5 +1,5 @@
 import signal
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
     QApplication,
@@ -12,6 +12,7 @@ from PyQt5.QtWidgets import (
     QWidget,
     QComboBox,
     QLabel,
+    QProgressDialog,
 )
 from codeaide.ui.code_popup import CodePopup
 from codeaide.ui.example_selection_dialog import show_example_dialog
@@ -33,6 +34,37 @@ from codeaide.utils.constants import (
 )
 from codeaide.utils.logging_config import get_logger
 from codeaide.ui.traceback_dialog import TracebackDialog
+import sounddevice as sd
+import numpy as np
+from scipy.io import wavfile
+import whisper
+import os
+
+
+class VoiceRecorderThread(QThread):
+    finished = pyqtSignal(str)
+
+    def __init__(self, filename):
+        super().__init__()
+        self.filename = filename
+        self.is_recording = False
+
+    def run(self):
+        RATE = 44100
+        self.is_recording = True
+        with sd.InputStream(samplerate=RATE, channels=1) as stream:
+            frames = []
+            while self.is_recording:
+                data, overflowed = stream.read(RATE)
+                if not overflowed:
+                    frames.append(data)
+
+        audio_data = np.concatenate(frames, axis=0)
+        wavfile.write(self.filename, RATE, audio_data)
+        self.finished.emit(self.filename)
+
+    def stop(self):
+        self.is_recording = False
 
 
 class ChatWindow(QMainWindow):
@@ -65,6 +97,9 @@ class ChatWindow(QMainWindow):
         self.timer.timeout.connect(lambda: None)
 
         self.logger.info("Chat window initialized")
+
+        # Setup voice recording after UI initialization
+        self.setup_voice_recording()
 
     def setup_ui(self):
         central_widget = QWidget(self)
@@ -118,7 +153,15 @@ class ChatWindow(QMainWindow):
         self.input_text.setFixedHeight(100)
         self.input_text.textChanged.connect(self.on_modify)
         self.input_text.installEventFilter(self)
-        main_layout.addWidget(self.input_text, stretch=1)
+
+        # Add microphone button to input area
+        input_layout = QHBoxLayout()
+        self.mic_button = QPushButton("Record", self)
+        self.mic_button.clicked.connect(self.toggle_voice_recording)
+        input_layout.addWidget(self.mic_button)
+        input_layout.addWidget(self.input_text)
+
+        main_layout.addLayout(input_layout)
 
         # Buttons
         button_layout = QHBoxLayout()
@@ -445,3 +488,61 @@ class ChatWindow(QMainWindow):
 
     def update_submit_button_state(self):
         self.submit_button.setEnabled(bool(self.input_text.toPlainText().strip()))
+
+    def setup_voice_recording(self):
+        self.logger.info("Setting up voice recording...")
+        self.is_recording = False
+        self.recorder_thread = None
+
+        progress_dialog = QProgressDialog("Loading Whisper model...", None, 0, 0, self)
+        progress_dialog.setWindowModality(Qt.WindowModal)
+        progress_dialog.setMinimumDuration(0)
+        progress_dialog.setValue(0)
+        progress_dialog.show()
+
+        QApplication.processEvents()  # Ensure the dialog is displayed
+
+        self.logger.info("Loading Whisper model...")
+        self.whisper_model = whisper.load_model("tiny")
+        self.logger.info("Whisper model loaded successfully")
+
+        progress_dialog.close()
+
+    def toggle_voice_recording(self):
+        if not self.is_recording:
+            self.start_voice_recording()
+        else:
+            self.stop_voice_recording()
+
+    def start_voice_recording(self):
+        self.is_recording = True
+        self.mic_button.setStyleSheet("background-color: red;")
+
+        filename = os.path.join(
+            self.chat_handler.file_handler.session_dir, "temp_audio.wav"
+        )
+        self.recorder_thread = VoiceRecorderThread(filename)
+        self.recorder_thread.finished.connect(self.on_recording_finished)
+        self.recorder_thread.start()
+
+    def stop_voice_recording(self):
+        if self.recorder_thread:
+            self.recorder_thread.stop()
+        self.is_recording = False
+        self.mic_button.setStyleSheet("")
+
+    def on_recording_finished(self, filename):
+        # Transcribe the audio
+        result = self.whisper_model.transcribe(filename)
+        transcribed_text = result["text"]
+
+        # Insert the transcribed text into the input box
+        current_text = self.input_text.toPlainText()
+        if current_text:
+            new_text = current_text + " " + transcribed_text
+        else:
+            new_text = transcribed_text
+        self.input_text.setPlainText(new_text)
+
+        # Clean up the temporary audio file
+        os.remove(filename)
