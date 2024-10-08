@@ -604,24 +604,37 @@ class ChatWindow(QMainWindow):
 
         # Save the original HTML content
         self.original_html = self.input_text.toHtml()
-        self.logger.info(f"Original HTML saved: {self.original_html}")
 
-        # Change text color to light gray while preserving formatting
-        modified_html = self.original_html.replace("color:#000000;", "color:#808080;")
+        # Check if the text box is empty or contains only placeholder text
+        if (
+            self.input_text.toPlainText().strip() == ""
+            or self.input_text.toPlainText() == self.placeholder_text
+        ):
+            # If empty, set HTML directly without any paragraph tags
+            self.input_text.setHtml('<span style="color: white;">Recording...</span>')
+        else:
+            # Change text color to light gray while preserving formatting
+            modified_html = self.original_html.replace(
+                "color:#000000;", "color:#808080;"
+            )
+            modified_html = modified_html.replace("color:#ffffff;", "color:#808080;")
 
-        # If there's no color specified, add it
-        if "color:#808080;" not in modified_html:
+            # If there's no color specified, add it
+            if "color:#808080;" not in modified_html:
+                modified_html = modified_html.replace(
+                    '<body style="', '<body style="color:#808080; '
+                )
+
+            # Add "Recording..." in white at the end, without extra line break
+            recording_html = '<span style="color: white;">Recording...</span>'
+
+            # Always add a new paragraph with the recording text at the end
             modified_html = modified_html.replace(
-                '<body style="', '<body style="color:#808080; '
+                "</body></html>", f"<p>{recording_html}</p></body></html>"
             )
 
-        # Add "Recording..." in white at the end, without extra line break
-        recording_html = '<span style="color: white;">Recording...</span>'
-        modified_html = modified_html.replace(
-            "</body></html>", f"{recording_html}</body></html>"
-        )
+            self.input_text.setHtml(modified_html)
 
-        self.input_text.setHtml(modified_html)
         self.input_text.setReadOnly(True)
 
         # Scroll to show the "Recording..." text
@@ -695,13 +708,15 @@ class ChatWindow(QMainWindow):
         self.logger.info("on_transcription_finished method called")
         self.logger.info(f"Transcribed text: {transcribed_text}")
 
-        # Restore the original HTML
-        self.input_text.setHtml(self.original_html)
-
-        # Move cursor to the end and insert transcribed text
-        cursor = self.input_text.textCursor()
-        cursor.movePosition(cursor.End)
-        cursor.insertText(transcribed_text)
+        if self.original_html.strip() == "":
+            # If the original text was empty, just set the transcribed text
+            self.input_text.setPlainText(transcribed_text)
+        else:
+            # Restore the original HTML and append the transcribed text
+            self.input_text.setHtml(self.original_html)
+            cursor = self.input_text.textCursor()
+            cursor.movePosition(cursor.End)
+            cursor.insertText(transcribed_text)
 
         self.input_text.setReadOnly(False)
 
