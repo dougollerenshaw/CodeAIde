@@ -17,3 +17,4 @@ autoflake
 openai-whisper
 sounddevice
 scipy
+ffmpeg-python
