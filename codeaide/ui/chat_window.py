@@ -602,16 +602,30 @@ class ChatWindow(QMainWindow):
         for widget in self.widgets_to_disable_when_recording:
             widget.setEnabled(False)
 
-        # Save the original text content
-        self.original_text = self.input_text.toPlainText().rstrip()
-        self.logger.info(f"Original text saved: {self.original_text}")
+        # Save the original HTML content
+        self.original_html = self.input_text.toHtml()
+        self.logger.info(f"Original HTML saved: {self.original_html}")
 
-        # Change existing text to light gray and add "Recording..." in white
-        gray_text = f'<span style="color: #808080;">{self.original_text}</span>'
-        space = " " if self.original_text else ""
-        new_html = f'{gray_text}{space}<span style="color: white;">Recording...</span>'
-        self.input_text.setHtml(new_html)
+        # Change text color to light gray while preserving formatting
+        modified_html = self.original_html.replace("color:#000000;", "color:#808080;")
+
+        # If there's no color specified, add it
+        if "color:#808080;" not in modified_html:
+            modified_html = modified_html.replace(
+                '<body style="', '<body style="color:#808080; '
+            )
+
+        # Add "Recording..." in white at the end, without extra line break
+        recording_html = '<span style="color: white;">Recording...</span>'
+        modified_html = modified_html.replace(
+            "</body></html>", f"{recording_html}</body></html>"
+        )
+
+        self.input_text.setHtml(modified_html)
         self.input_text.setReadOnly(True)
+
+        # Scroll to show the "Recording..." text
+        self.scroll_to_bottom()
 
         filename = os.path.expanduser("~/recorded_audio.wav")
         self.recorder = AudioRecorder(filename, self.logger)
@@ -626,12 +640,15 @@ class ChatWindow(QMainWindow):
         self.is_recording = False
         self.set_record_button_style(False)
 
-        # Replace "Recording..." text with "Transcribing..."
+        # Replace "Recording..." text with "Transcribing..." without adding a line break
         current_html = self.input_text.toHtml()
-        new_html = current_html.replace("Recording...</span>", "Transcribing...</span>")
+        new_html = current_html.replace(
+            '<span style="color: white;">Recording...</span>',
+            '<span style="color: white;">Transcribing...</span>',
+        )
         self.input_text.setHtml(new_html)
 
-        # Scroll to the bottom
+        # Scroll to ensure the "Transcribing..." text is visible
         self.scroll_to_bottom()
 
         # Re-enable widgets
@@ -678,16 +695,26 @@ class ChatWindow(QMainWindow):
         self.logger.info("on_transcription_finished method called")
         self.logger.info(f"Transcribed text: {transcribed_text}")
 
-        # Restore the original text (in black) and append the transcribed text
-        space = " " if self.original_text else ""
-        new_text = f"{self.original_text}{space}{transcribed_text}"
-        self.input_text.setPlainText(new_text)
+        # Restore the original HTML
+        self.input_text.setHtml(self.original_html)
+
+        # Move cursor to the end and insert transcribed text
+        cursor = self.input_text.textCursor()
+        cursor.movePosition(cursor.End)
+        cursor.insertText(transcribed_text)
+
         self.input_text.setReadOnly(False)
 
-        self.logger.info(f"Final text in input_text: {self.input_text.toPlainText()}")
+        # Scroll to show the new content
+        self.scroll_to_bottom()
 
-        # Clear the original text
-        self.original_text = ""
+        self.logger.info(f"Final HTML set in input_text: {self.input_text.toHtml()}")
+        self.logger.info(
+            f"Final plain text in input_text: {self.input_text.toPlainText()}"
+        )
+
+        # Clear the original HTML
+        self.original_html = ""
 
     def scroll_to_bottom(self):
         # Move cursor to the end of the text
