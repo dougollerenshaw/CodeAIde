@@ -659,8 +659,6 @@ class ChatWindow(QMainWindow):
         self.is_recording = False
         self.set_record_button_style(False)
 
-        self.input_text.toHtml()
-
         self.scroll_to_bottom()
 
         # Re-enable widgets
