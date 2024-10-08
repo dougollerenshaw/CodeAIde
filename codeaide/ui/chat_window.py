@@ -1,10 +1,5 @@
 import signal
-from PyQt5.QtCore import (
-    Qt,
-    QTimer,
-    QThread,
-    pyqtSignal,
-)
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
     QApplication,
@@ -17,7 +12,6 @@ from PyQt5.QtWidgets import (
     QWidget,
     QComboBox,
     QLabel,
-    QProgressDialog,
 )
 from codeaide.ui.code_popup import CodePopup
 from codeaide.ui.example_selection_dialog import show_example_dialog
@@ -39,85 +33,6 @@ from codeaide.utils.constants import (
 )
 from codeaide.utils.logging_config import get_logger
 from codeaide.ui.traceback_dialog import TracebackDialog
-import os
-import time
-import sounddevice as sd
-import numpy as np
-from scipy.io import wavfile
-import whisper
-
-
-class AudioRecorder(QThread):
-    finished = pyqtSignal(str, float)
-
-    def __init__(self, filename):
-        super().__init__()
-        self.filename = filename
-        self.is_recording = False
-        self.start_time = None
-
-    def run(self):
-        RATE = 16000  # 16kHz to match Whisper's expected input
-        self.is_recording = True
-        self.start_time = time.time()
-        with sd.InputStream(samplerate=RATE, channels=1) as stream:
-            frames = []
-            while self.is_recording:
-                data, overflowed = stream.read(RATE)
-                if not overflowed:
-                    frames.append(data)
-
-        audio_data = np.concatenate(frames, axis=0)
-        print(f"Raw audio data shape: {audio_data.shape}")
-        print(f"Raw audio data range: {audio_data.min()} to {audio_data.max()}")
-
-        # Ensure audio data is in the correct range for int16
-        audio_data = np.clip(audio_data * 32768, -32768, 32767).astype(np.int16)
-
-        wavfile.write(self.filename, RATE, audio_data)
-        end_time = time.time()
-        self.finished.emit(self.filename, end_time - self.start_time)
-
-    def stop(self):
-        self.is_recording = False
-
-
-class TranscriptionThread(QThread):
-    finished = pyqtSignal(str)
-
-    def __init__(self, whisper_model, filename):
-        super().__init__()
-        self.whisper_model = whisper_model
-        self.filename = filename
-
-    def run(self):
-        print("Transcribing audio...")
-        read_start = time.time()
-        # Read the WAV file
-        sample_rate, audio_data = wavfile.read(self.filename)
-        read_end = time.time()
-        print(f"Time to read WAV file: {read_end - read_start:.2f} seconds")
-
-        print(f"Audio shape: {audio_data.shape}, Sample rate: {sample_rate}")
-        print(f"Audio duration: {len(audio_data) / sample_rate:.2f} seconds")
-
-        # Convert to float32 and normalize
-        audio_data = audio_data.astype(np.float32) / 32768.0
-
-        print(f"Audio data range: {audio_data.min()} to {audio_data.max()}")
-
-        # Transcribe
-        transcribe_start = time.time()
-        result = self.whisper_model.transcribe(audio_data)
-        transcribe_end = time.time()
-        transcribed_text = result["text"].strip()
-        print(f"Transcription: {transcribed_text}")
-        print(
-            f"Time for Whisper to transcribe: {transcribe_end - transcribe_start:.2f} seconds"
-        )
-        print("Transcription complete.")
-
-        self.finished.emit(transcribed_text)
 
 
 class ChatWindow(QMainWindow):
@@ -134,11 +49,6 @@ class ChatWindow(QMainWindow):
         self.setup_ui()
         self.setup_input_placeholder()
         self.update_submit_button_state()
-
-        # Initialize Whisper model
-        print("Loading Whisper model...")
-        self.whisper_model = whisper.load_model("tiny")
-        print("Whisper model loaded.")
 
         # Check API key status
         if not self.chat_handler.api_key_valid:
@@ -208,34 +118,7 @@ class ChatWindow(QMainWindow):
         self.input_text.setFixedHeight(100)
         self.input_text.textChanged.connect(self.on_modify)
         self.input_text.installEventFilter(self)
-
-        # Add record button
-        self.record_button = QPushButton("Record", self)
-        self.record_button.clicked.connect(self.toggle_recording)
-        self.record_button.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #4CAF50;
-                color: white;
-                border: none;
-                padding: 5px 10px;
-                text-align: center;
-                text-decoration: none;
-                font-size: 14px;
-                margin: 4px 2px;
-                border-radius: 12px;
-            }
-            QPushButton:hover {
-                background-color: #45a049;
-            }
-        """
-        )
-
-        # Modify the input layout to include the record button
-        input_layout = QHBoxLayout()
-        input_layout.addWidget(self.record_button)
-        input_layout.addWidget(self.input_text)
-        main_layout.addLayout(input_layout)
+        main_layout.addWidget(self.input_text, stretch=1)
 
         # Buttons
         button_layout = QHBoxLayout()
@@ -562,103 +445,3 @@ class ChatWindow(QMainWindow):
 
     def update_submit_button_state(self):
         self.submit_button.setEnabled(bool(self.input_text.toPlainText().strip()))
-
-    def toggle_recording(self):
-        if not hasattr(self, "is_recording"):
-            self.is_recording = False
-
-        if not self.is_recording:
-            self.start_recording()
-        else:
-            self.stop_recording()
-
-    def start_recording(self):
-        self.is_recording = True
-        self.record_button.setText("Stop Recording")
-        self.record_button.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #f44336;
-                color: white;
-                border: none;
-                padding: 5px 10px;
-                text-align: center;
-                text-decoration: none;
-                font-size: 14px;
-                margin: 4px 2px;
-                border-radius: 12px;
-            }
-            QPushButton:hover {
-                background-color: #d32f2f;
-            }
-        """
-        )
-        filename = os.path.expanduser("~/recorded_audio.wav")
-        self.recorder = AudioRecorder(filename)
-        self.recorder.finished.connect(self.on_recording_finished)
-        self.recorder.start()
-
-    def stop_recording(self):
-        if self.recorder:
-            print(f"Stop recording clicked at: {time.time():.2f}")
-            self.recorder.stop()
-        self.is_recording = False
-        self.record_button.setText("Record")
-        self.record_button.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #4CAF50;
-                color: white;
-                border: none;
-                padding: 5px 10px;
-                text-align: center;
-                text-decoration: none;
-                font-size: 14px;
-                margin: 4px 2px;
-                border-radius: 12px;
-            }
-            QPushButton:hover {
-                background-color: #45a049;
-            }
-        """
-        )
-
-    def on_recording_finished(self, filename, recording_duration):
-        print(f"Recording saved to: {filename}")
-        print(f"Total recording time: {recording_duration:.2f} seconds")
-        transcription_start = time.time()
-        self.transcribe_audio(filename)
-        transcription_end = time.time()
-        print(
-            f"Total time from recording stop to transcription complete: {transcription_end - transcription_start:.2f} seconds"
-        )
-
-    def transcribe_audio(self, filename):
-        progress_dialog = QProgressDialog("Transcribing audio...", None, 0, 0, self)
-        progress_dialog.setWindowTitle("Please Wait")
-        progress_dialog.setWindowModality(Qt.WindowModal)
-        progress_dialog.setAutoClose(True)
-        progress_dialog.setAutoReset(True)
-        progress_dialog.setMinimumDuration(0)
-        progress_dialog.setValue(0)
-        progress_dialog.setMaximum(0)  # This makes it an indeterminate progress dialog
-        progress_dialog.show()
-
-        self.transcription_thread = TranscriptionThread(self.whisper_model, filename)
-        self.transcription_thread.finished.connect(self.on_transcription_finished)
-        self.transcription_thread.finished.connect(progress_dialog.close)
-        self.transcription_thread.start()
-
-    def on_transcription_finished(self, transcribed_text):
-        # Insert transcribed text into the input text field
-        current_text = self.input_text.toPlainText()
-        if current_text:
-            new_text = current_text + " " + transcribed_text
-        else:
-            new_text = transcribed_text
-        self.input_text.setPlainText(new_text)
-
-        # Move cursor to the end of the text
-        cursor = self.input_text.textCursor()
-        cursor.movePosition(cursor.End)
-        self.input_text.setTextCursor(cursor)

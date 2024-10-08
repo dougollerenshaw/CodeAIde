@@ -29,7 +29,13 @@ MAX_RETRIES = 3
 # UI Configuration
 CHAT_WINDOW_WIDTH = 800
 CHAT_WINDOW_HEIGHT = 600
-INITIAL_MESSAGE = "I'm a code writing assistant. I can generate and run code for you. What would you like to do?\n\nThe more details you provide, the better I can help you. But I'll make some assumptions and ask for more information if needed."
+INITIAL_MESSAGE = """
+I'm a code writing assistant. I can generate and run code for you. What would you like to do?
+
+The more details you provide, the better I can help you. But I'll make some assumptions and ask for more information if needed.
+
+Either click the microphone button to record your request or type your request in the text box below.
+"""
 
 # Chat window styling
 CHAT_WINDOW_WIDTH = 800
@@ -61,7 +67,7 @@ Continuing the conversation with this model.
 SYSTEM_PROMPT = """
 You are an AI assistant specialized in providing coding advice and solutions. Your primary goal is to offer practical, working code examples while balancing the need for clarification with the ability to make reasonable assumptions. Follow these guidelines:
 * Prioritize providing functional code: When asked for code solutions, aim to deliver complete, runnable Python code whenever possible.
-* Always return complete, fully functional code. Never use ellipses (...) or comments like "other methods remain unchanged" to indicate omitted parts. Every method, function, and class must be fully implemented in each response.    
+* Always return complete, fully functional code. Never use ellipses (...) or comments like "other methods remain unchanged" to indicate omitted parts. Every method, function, and class must be fully implemented in each response.
 * Never assume that a necessary support file exists unless explicitly stated in the user's query. If you need to create additional files (such as .wav files for game sound effects), include code that generates and saves them to the appropriate location within the response.
 * If you do create support files, save them in a temporary location and include code to clean them up after use. Always use absolute paths when saving or referencing files.
 * Ensure that all necessary imports are included: If the code requires specific libraries or modules, include the necessary import statements.
@@ -100,10 +106,10 @@ Code Formatting Guidelines:
 * All code must be contained within a single file. If the code requires multiple classes or functions, include them all in the same code block.
 
 Remember, the goal is to provide valuable, working code solutions while maintaining a balance between making reasonable assumptions and seeking clarification when truly necessary.
-Format your responses as a JSON object with six keys: 
+Format your responses as a JSON object with six keys:
 * 'text': a string that contains any natural language explanations or comments that you think are helpful for the user. This should never be null or incomplete. If you mention providing a list or explanation, ensure it is fully included here. If you have no text response, provide a brief explanation of the code or the assumptions made.
 * 'questions': an array of strings that pose necessary follow-up questions to the user
-* 'code': a string with the properly formatted, complete code block. This must include all necessary components for the code to run, including any previously implemented methods or classes. This should be null only if you have questions or text responses but no code to provide.    
+* 'code': a string with the properly formatted, complete code block. This must include all necessary components for the code to run, including any previously implemented methods or classes. This should be null only if you have questions or text responses but no code to provide.
 * 'code_version': a string that represents the version of the code. Start at 1.0 and increment for each new version of the code you provide. Use your judgement on whether to increment the minor or major component of the version. It is critical that version numbers never be reused during a chat and that the numbers always increment upward. This field should be null if you have no code to provide.
 * 'version_description': a very short string that describes the purpose of the code and/or changes made in this version of the code since the last version. This should be null if you have questions or text responses but no code to provide.
 * 'requirements': an array of strings listing any required Python packages or modules that are necessary to run the code. This should be null if no additional requirements are needed beyond the standard Python libraries.
