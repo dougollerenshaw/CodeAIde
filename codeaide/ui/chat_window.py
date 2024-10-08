@@ -4,8 +4,9 @@ from PyQt5.QtCore import (
     QTimer,
     QThread,
     pyqtSignal,
+    QSize,  # Add QSize here
 )
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QIcon
 from PyQt5.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -131,6 +132,15 @@ class ChatWindow(QMainWindow):
         self.code_popup = None
         self.waiting_for_api_key = False
         self.chat_contents = []
+
+        # Load microphone icons
+        self.green_mic_icon = QIcon(
+            general_utils.get_resource_path("codeaide/assets/green_mic.png")
+        )
+        self.red_mic_icon = QIcon(
+            general_utils.get_resource_path("codeaide/assets/red_mic.png")
+        )
+
         self.setup_ui()
         self.setup_input_placeholder()
         self.update_submit_button_state()
@@ -210,26 +220,23 @@ class ChatWindow(QMainWindow):
         self.input_text.installEventFilter(self)
 
         # Add record button
-        self.record_button = QPushButton("Record", self)
-        self.record_button.clicked.connect(self.toggle_recording)
+        self.record_button = QPushButton()
+        self.record_button.setIcon(self.green_mic_icon)
+        self.record_button.setIconSize(QSize(50, 100))  # Adjust size as needed
+        self.record_button.setFixedSize(60, 110)  # Adjust size as needed
         self.record_button.setStyleSheet(
             """
             QPushButton {
-                background-color: #4CAF50;
-                color: white;
+                background-color: transparent;
                 border: none;
-                padding: 5px 10px;
-                text-align: center;
-                text-decoration: none;
-                font-size: 14px;
-                margin: 4px 2px;
-                border-radius: 12px;
+                border-radius: 25px;
             }
             QPushButton:hover {
-                background-color: #45a049;
+                background-color: rgba(200, 200, 200, 50);
             }
         """
         )
+        self.record_button.clicked.connect(self.toggle_recording)
 
         # Modify the input layout to include the record button
         input_layout = QHBoxLayout()
@@ -574,25 +581,7 @@ class ChatWindow(QMainWindow):
 
     def start_recording(self):
         self.is_recording = True
-        self.record_button.setText("Stop Recording")
-        self.record_button.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #f44336;
-                color: white;
-                border: none;
-                padding: 5px 10px;
-                text-align: center;
-                text-decoration: none;
-                font-size: 14px;
-                margin: 4px 2px;
-                border-radius: 12px;
-            }
-            QPushButton:hover {
-                background-color: #d32f2f;
-            }
-        """
-        )
+        self.set_record_button_style(True)
         filename = os.path.expanduser("~/recorded_audio.wav")
         self.recorder = AudioRecorder(filename)
         self.recorder.finished.connect(self.on_recording_finished)
@@ -600,27 +589,14 @@ class ChatWindow(QMainWindow):
 
     def stop_recording(self):
         if self.recorder:
-            print(f"Stop recording clicked at: {time.time():.2f}")
+            self.logger.info(f"Stop recording clicked at: {time.time():.2f}")
             self.recorder.stop()
         self.is_recording = False
-        self.record_button.setText("Record")
-        self.record_button.setStyleSheet(
-            """
-            QPushButton {
-                background-color: #4CAF50;
-                color: white;
-                border: none;
-                padding: 5px 10px;
-                text-align: center;
-                text-decoration: none;
-                font-size: 14px;
-                margin: 4px 2px;
-                border-radius: 12px;
-            }
-            QPushButton:hover {
-                background-color: #45a049;
-            }
-        """
+        self.set_record_button_style(False)
+
+    def set_record_button_style(self, is_recording):
+        self.record_button.setIcon(
+            self.red_mic_icon if is_recording else self.green_mic_icon
         )
 
     def on_recording_finished(self, filename, recording_duration):
