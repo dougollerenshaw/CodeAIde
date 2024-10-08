@@ -597,6 +597,15 @@ class ChatWindow(QMainWindow):
         for widget in self.widgets_to_disable_when_recording:
             widget.setEnabled(False)
 
+        # Add "Recording" text to the input box
+        current_text = self.input_text.toPlainText()
+        if current_text:
+            new_text = current_text + " Recording... "
+        else:
+            new_text = "Recording... "
+        self.input_text.setPlainText(new_text)
+        self.input_text.setReadOnly(True)
+
         filename = os.path.expanduser("~/recorded_audio.wav")
         self.recorder = AudioRecorder(filename)
         self.recorder.finished.connect(self.on_recording_finished)
@@ -608,6 +617,11 @@ class ChatWindow(QMainWindow):
             self.recorder.stop()
         self.is_recording = False
         self.set_record_button_style(False)
+
+        # Remove "Recording" text and add "Transcribing..."
+        current_text = self.input_text.toPlainText()
+        new_text = current_text.replace("Recording... ", "Transcribing... ")
+        self.input_text.setPlainText(new_text)
 
         # Re-enable widgets
         for widget in self.widgets_to_disable_when_recording:
@@ -645,13 +659,17 @@ class ChatWindow(QMainWindow):
         self.transcription_thread.start()
 
     def on_transcription_finished(self, transcribed_text):
-        # Insert transcribed text into the input text field
+        # Remove "Transcribing..." text
         current_text = self.input_text.toPlainText()
+        current_text = current_text.replace("Transcribing...", "").strip()
+
+        # Insert transcribed text into the input text field
         if current_text:
             new_text = current_text + " " + transcribed_text
         else:
             new_text = transcribed_text
         self.input_text.setPlainText(new_text)
+        self.input_text.setReadOnly(False)
 
         # Move cursor to the end of the text
         cursor = self.input_text.textCursor()
