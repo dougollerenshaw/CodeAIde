@@ -659,15 +659,8 @@ class ChatWindow(QMainWindow):
         self.is_recording = False
         self.set_record_button_style(False)
 
-        # Replace "Recording..." text with "Transcribing..." without adding a line break
-        current_html = self.input_text.toHtml()
-        new_html = current_html.replace(
-            '<span style="color: white;">Recording...</span>',
-            '<span style="color: white;">Transcribing...</span>',
-        )
-        self.input_text.setHtml(new_html)
+        self.input_text.toHtml()
 
-        # Scroll to ensure the "Transcribing..." text is visible
         self.scroll_to_bottom()
 
         # Re-enable widgets
