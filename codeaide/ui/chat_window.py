@@ -266,6 +266,16 @@ class ChatWindow(QMainWindow):
 
         self.logger.info("Chat window UI initialized")
 
+        # After creating all buttons and dropdowns, add them to the list
+        self.widgets_to_disable_when_recording = [
+            self.submit_button,
+            self.example_button,
+            self.new_session_button,
+            self.provider_dropdown,
+            self.model_dropdown,
+            self.input_text,  # Disable the input text area as well
+        ]
+
     def setup_input_placeholder(self):
         self.placeholder_text = "Enter text here..."
         self.input_text.setPlaceholderText(self.placeholder_text)
@@ -582,6 +592,11 @@ class ChatWindow(QMainWindow):
     def start_recording(self):
         self.is_recording = True
         self.set_record_button_style(True)
+
+        # Disable widgets
+        for widget in self.widgets_to_disable_when_recording:
+            widget.setEnabled(False)
+
         filename = os.path.expanduser("~/recorded_audio.wav")
         self.recorder = AudioRecorder(filename)
         self.recorder.finished.connect(self.on_recording_finished)
@@ -593,6 +608,10 @@ class ChatWindow(QMainWindow):
             self.recorder.stop()
         self.is_recording = False
         self.set_record_button_style(False)
+
+        # Re-enable widgets
+        for widget in self.widgets_to_disable_when_recording:
+            widget.setEnabled(True)
 
     def set_record_button_style(self, is_recording):
         self.record_button.setIcon(
