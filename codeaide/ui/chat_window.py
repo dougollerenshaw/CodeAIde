@@ -597,12 +597,12 @@ class ChatWindow(QMainWindow):
         for widget in self.widgets_to_disable_when_recording:
             widget.setEnabled(False)
 
-        # Add "Recording" text to the input box
+        # Add "Recording..." text to the input box
         current_text = self.input_text.toPlainText()
         if current_text:
-            new_text = current_text + " Recording... "
+            new_text = current_text + " Recording..."
         else:
-            new_text = "Recording... "
+            new_text = "Recording..."
         self.input_text.setPlainText(new_text)
         self.input_text.setReadOnly(True)
 
@@ -618,9 +618,9 @@ class ChatWindow(QMainWindow):
         self.is_recording = False
         self.set_record_button_style(False)
 
-        # Remove "Recording" text and add "Transcribing..."
+        # Replace "Recording..." text with "Transcribing..."
         current_text = self.input_text.toPlainText()
-        new_text = current_text.replace("Recording... ", "Transcribing... ")
+        new_text = current_text.replace("Recording...", "Transcribing...")
         self.input_text.setPlainText(new_text)
 
         # Re-enable widgets
