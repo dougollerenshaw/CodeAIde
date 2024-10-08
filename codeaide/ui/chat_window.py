@@ -604,15 +604,18 @@ class ChatWindow(QMainWindow):
 
         # Save the original HTML content
         self.original_html = self.input_text.toHtml()
+        self.logger.info(f"Original HTML: {self.original_html}")
 
         # Check if the text box is empty or contains only placeholder text
         if (
             self.input_text.toPlainText().strip() == ""
             or self.input_text.toPlainText() == self.placeholder_text
         ):
+            self.logger.info("Text box is empty or contains only placeholder text")
             # If empty, set HTML directly without any paragraph tags
             self.input_text.setHtml('<span style="color: white;">Recording...</span>')
         else:
+            self.logger.info("Text box contains content")
             # Change text color to light gray while preserving formatting
             modified_html = self.original_html.replace(
                 "color:#000000;", "color:#808080;"
@@ -628,17 +631,20 @@ class ChatWindow(QMainWindow):
             # Add "Recording..." in white at the end, without extra line break
             recording_html = '<span style="color: white;">Recording...</span>'
 
-            # Always add a new paragraph with the recording text at the end
+            # Always add the recording text at the end
             modified_html = modified_html.replace(
-                "</body></html>", f"<p>{recording_html}</p></body></html>"
+                "</body></html>", f"{recording_html}</body></html>"
             )
 
+            self.logger.info(f"Modified HTML before setting: {modified_html}")
             self.input_text.setHtml(modified_html)
 
         self.input_text.setReadOnly(True)
 
         # Scroll to show the "Recording..." text
         self.scroll_to_bottom()
+
+        self.logger.info(f"Final HTML after setting: {self.input_text.toHtml()}")
 
         filename = os.path.expanduser("~/recorded_audio.wav")
         self.recorder = AudioRecorder(filename, self.logger)
@@ -707,26 +713,35 @@ class ChatWindow(QMainWindow):
     def on_transcription_finished(self, transcribed_text):
         self.logger.info("on_transcription_finished method called")
         self.logger.info(f"Transcribed text: {transcribed_text}")
+        self.logger.info(f"Original HTML: {self.original_html}")
 
-        if self.original_html.strip() == "":
-            # If the original text was empty, just set the transcribed text
+        transcribed_text = (
+            transcribed_text.strip()
+        )  # Remove any leading/trailing whitespace
+
+        if not self.original_html.strip():
+            self.logger.info("No original text, setting transcribed text directly")
             self.input_text.setPlainText(transcribed_text)
         else:
-            # Restore the original HTML and append the transcribed text
+            self.logger.info("Original text exists, appending transcribed text")
             self.input_text.setHtml(self.original_html)
             cursor = self.input_text.textCursor()
             cursor.movePosition(cursor.End)
+
+            existing_text = self.input_text.toPlainText()
+            self.logger.info(f"Existing text: '{existing_text}'")
+
+            if existing_text and not existing_text.endswith((" ", "\n")):
+                self.logger.info("Adding space before transcribed text")
+                cursor.insertText(" ")
+
             cursor.insertText(transcribed_text)
 
         self.input_text.setReadOnly(False)
-
-        # Scroll to show the new content
         self.scroll_to_bottom()
 
-        self.logger.info(f"Final HTML set in input_text: {self.input_text.toHtml()}")
-        self.logger.info(
-            f"Final plain text in input_text: {self.input_text.toPlainText()}"
-        )
+        final_text = self.input_text.toPlainText()
+        self.logger.info(f"Final text: '{final_text}'")
 
         # Clear the original HTML
         self.original_html = ""
