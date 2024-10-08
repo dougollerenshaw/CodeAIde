@@ -602,12 +602,14 @@ class ChatWindow(QMainWindow):
         for widget in self.widgets_to_disable_when_recording:
             widget.setEnabled(False)
 
-        # Save the original text
-        self.original_text = self.input_text.toPlainText().strip()
+        # Save the original text content
+        self.original_text = self.input_text.toPlainText().rstrip()
         self.logger.info(f"Original text saved: {self.original_text}")
 
-        # Add "Recording..." text
-        new_html = f'<span style="color: lightgray;">{self.original_text}</span> <span style="color: white;">Recording...</span>'
+        # Change existing text to light gray and add "Recording..." in white
+        gray_text = f'<span style="color: #808080;">{self.original_text}</span>'
+        space = " " if self.original_text else ""
+        new_html = f'{gray_text}{space}<span style="color: white;">Recording...</span>'
         self.input_text.setHtml(new_html)
         self.input_text.setReadOnly(True)
 
@@ -628,6 +630,9 @@ class ChatWindow(QMainWindow):
         current_html = self.input_text.toHtml()
         new_html = current_html.replace("Recording...</span>", "Transcribing...</span>")
         self.input_text.setHtml(new_html)
+
+        # Scroll to the bottom
+        self.scroll_to_bottom()
 
         # Re-enable widgets
         for widget in self.widgets_to_disable_when_recording:
@@ -673,27 +678,23 @@ class ChatWindow(QMainWindow):
         self.logger.info("on_transcription_finished method called")
         self.logger.info(f"Transcribed text: {transcribed_text}")
 
-        # Combine the original text with the transcribed text
-        if self.original_text:
-            new_text = f"{self.original_text} {transcribed_text}".strip()
-        else:
-            new_text = transcribed_text.strip()
-        self.logger.info(f"New text to be set: {new_text}")
-
-        # Set the new text, wrapped in a white span
-        new_html = f'<span style="color: white;">{new_text}</span>'
-        self.input_text.setHtml(new_html)
+        # Restore the original text (in black) and append the transcribed text
+        space = " " if self.original_text else ""
+        new_text = f"{self.original_text}{space}{transcribed_text}"
+        self.input_text.setPlainText(new_text)
         self.input_text.setReadOnly(False)
 
+        self.logger.info(f"Final text in input_text: {self.input_text.toPlainText()}")
+
+        # Clear the original text
+        self.original_text = ""
+
+    def scroll_to_bottom(self):
         # Move cursor to the end of the text
         cursor = self.input_text.textCursor()
         cursor.movePosition(cursor.End)
         self.input_text.setTextCursor(cursor)
 
-        self.logger.info(f"Final HTML set in input_text: {self.input_text.toHtml()}")
-        self.logger.info(
-            f"Final plain text in input_text: {self.input_text.toPlainText()}"
-        )
-
-        # Clear the original text
-        self.original_text = ""
+        # Scroll to the bottom
+        scrollbar = self.input_text.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
