@@ -4,8 +4,6 @@ from PyQt5.QtCore import (
     QTimer,
     QThread,
     pyqtSignal,
-    QPropertyAnimation,
-    QEasingCurve,
 )
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
@@ -19,8 +17,7 @@ from PyQt5.QtWidgets import (
     QWidget,
     QComboBox,
     QLabel,
-    QProgressBar,
-    QDialog,
+    QProgressDialog,
 )
 from codeaide.ui.code_popup import CodePopup
 from codeaide.ui.example_selection_dialog import show_example_dialog
@@ -121,35 +118,6 @@ class TranscriptionThread(QThread):
         print("Transcription complete.")
 
         self.finished.emit(transcribed_text)
-
-
-class AnimatedProgressDialog(QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Transcribing Audio")
-        self.setFixedSize(300, 100)
-        layout = QVBoxLayout(self)
-
-        self.label = QLabel("Transcribing audio...")
-        layout.addWidget(self.label)
-
-        self.progress_bar = QProgressBar(self)
-        self.progress_bar.setRange(0, 100)
-        self.progress_bar.setValue(0)
-        layout.addWidget(self.progress_bar)
-
-        self.animation = QPropertyAnimation(self.progress_bar, b"value")
-        self.animation.setDuration(1000)  # 1 second for a full cycle
-        self.animation.setStartValue(0)
-        self.animation.setEndValue(100)
-        self.animation.setEasingCurve(QEasingCurve.Linear)
-        self.animation.finished.connect(self.restart_animation)
-
-        self.animation.start()
-
-    def restart_animation(self):
-        self.progress_bar.setValue(0)
-        self.animation.start()
 
 
 class ChatWindow(QMainWindow):
@@ -666,8 +634,14 @@ class ChatWindow(QMainWindow):
         )
 
     def transcribe_audio(self, filename):
-        progress_dialog = AnimatedProgressDialog(self)
+        progress_dialog = QProgressDialog("Transcribing audio...", None, 0, 0, self)
+        progress_dialog.setWindowTitle("Please Wait")
         progress_dialog.setWindowModality(Qt.WindowModal)
+        progress_dialog.setAutoClose(True)
+        progress_dialog.setAutoReset(True)
+        progress_dialog.setMinimumDuration(0)
+        progress_dialog.setValue(0)
+        progress_dialog.setMaximum(0)  # This makes it an indeterminate progress dialog
         progress_dialog.show()
 
         self.transcription_thread = TranscriptionThread(self.whisper_model, filename)
