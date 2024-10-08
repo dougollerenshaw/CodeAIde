@@ -1,6 +1,12 @@
 import signal
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QColor
+from PyQt5.QtCore import (
+    Qt,
+    QTimer,
+    QThread,
+    pyqtSignal,
+    QSize,  # Add QSize here
+)
+from PyQt5.QtGui import QColor, QIcon
 from PyQt5.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -12,6 +18,7 @@ from PyQt5.QtWidgets import (
     QWidget,
     QComboBox,
     QLabel,
+    QProgressDialog,
 )
 from codeaide.ui.code_popup import CodePopup
 from codeaide.ui.example_selection_dialog import show_example_dialog
@@ -33,6 +40,89 @@ from codeaide.utils.constants import (
 )
 from codeaide.utils.logging_config import get_logger
 from codeaide.ui.traceback_dialog import TracebackDialog
+import time
+import sounddevice as sd
+import numpy as np
+from scipy.io import wavfile
+import whisper
+import tempfile
+
+
+class AudioRecorder(QThread):
+    finished = pyqtSignal(str, float)
+
+    def __init__(self, filename, logger):
+        super().__init__()
+        self.filename = filename
+        self.is_recording = False
+        self.start_time = None
+        self.logger = logger
+
+    def run(self):
+        RATE = 16000  # 16kHz to match Whisper's expected input
+        self.is_recording = True
+        self.start_time = time.time()
+        with sd.InputStream(samplerate=RATE, channels=1) as stream:
+            frames = []
+            while self.is_recording:
+                data, overflowed = stream.read(RATE)
+                if not overflowed:
+                    frames.append(data)
+
+        audio_data = np.concatenate(frames, axis=0)
+        self.logger.info(f"Raw audio data shape: {audio_data.shape}")
+        self.logger.info(
+            f"Raw audio data range: {audio_data.min()} to {audio_data.max()}"
+        )
+
+        # Ensure audio data is in the correct range for int16
+        audio_data = np.clip(audio_data * 32768, -32768, 32767).astype(np.int16)
+
+        wavfile.write(self.filename, RATE, audio_data)
+        end_time = time.time()
+        self.finished.emit(self.filename, end_time - self.start_time)
+
+    def stop(self):
+        self.is_recording = False
+
+
+class TranscriptionThread(QThread):
+    finished = pyqtSignal(str)
+
+    def __init__(self, whisper_model, filename, logger):
+        super().__init__()
+        self.whisper_model = whisper_model
+        self.filename = filename
+        self.logger = logger
+
+    def run(self):
+        self.logger.info("Transcribing audio...")
+        read_start = time.time()
+        # Read the WAV file
+        sample_rate, audio_data = wavfile.read(self.filename)
+        read_end = time.time()
+        self.logger.info(f"Time to read WAV file: {read_end - read_start:.2f} seconds")
+
+        self.logger.info(f"Audio shape: {audio_data.shape}, Sample rate: {sample_rate}")
+        self.logger.info(f"Audio duration: {len(audio_data) / sample_rate:.2f} seconds")
+
+        # Convert to float32 and normalize
+        audio_data = audio_data.astype(np.float32) / 32768.0
+
+        self.logger.info(f"Audio data range: {audio_data.min()} to {audio_data.max()}")
+
+        # Transcribe
+        transcribe_start = time.time()
+        result = self.whisper_model.transcribe(audio_data)
+        transcribe_end = time.time()
+        transcribed_text = result["text"].strip()
+        self.logger.info(f"Transcription: {transcribed_text}")
+        self.logger.info(
+            f"Time for Whisper to transcribe: {transcribe_end - transcribe_start:.2f} seconds"
+        )
+        self.logger.info("Transcription complete.")
+        self.logger.info(f"Emitting finished signal with text: {transcribed_text}")
+        self.finished.emit(transcribed_text)
 
 
 class ChatWindow(QMainWindow):
@@ -46,9 +136,24 @@ class ChatWindow(QMainWindow):
         self.code_popup = None
         self.waiting_for_api_key = False
         self.chat_contents = []
+        self.original_text = ""  # Add this line to store the original text
+
+        # Load microphone icons
+        self.green_mic_icon = QIcon(
+            general_utils.get_resource_path("codeaide/assets/green_mic.png")
+        )
+        self.red_mic_icon = QIcon(
+            general_utils.get_resource_path("codeaide/assets/red_mic.png")
+        )
+
         self.setup_ui()
         self.setup_input_placeholder()
         self.update_submit_button_state()
+
+        # Initialize Whisper model
+        print("Loading Whisper model...")
+        self.whisper_model = whisper.load_model("tiny")
+        print("Whisper model loaded.")
 
         # Check API key status
         if not self.chat_handler.api_key_valid:
@@ -118,7 +223,31 @@ class ChatWindow(QMainWindow):
         self.input_text.setFixedHeight(100)
         self.input_text.textChanged.connect(self.on_modify)
         self.input_text.installEventFilter(self)
-        main_layout.addWidget(self.input_text, stretch=1)
+
+        # Add record button
+        self.record_button = QPushButton()
+        self.record_button.setIcon(self.green_mic_icon)
+        self.record_button.setIconSize(QSize(50, 100))  # Adjust size as needed
+        self.record_button.setFixedSize(60, 110)  # Adjust size as needed
+        self.record_button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: transparent;
+                border: none;
+                border-radius: 25px;
+            }
+            QPushButton:hover {
+                background-color: rgba(200, 200, 200, 50);
+            }
+        """
+        )
+        self.record_button.clicked.connect(self.toggle_recording)
+
+        # Modify the input layout to include the record button
+        input_layout = QHBoxLayout()
+        input_layout.addWidget(self.record_button)
+        input_layout.addWidget(self.input_text)
+        main_layout.addLayout(input_layout)
 
         # Buttons
         button_layout = QHBoxLayout()
@@ -141,6 +270,16 @@ class ChatWindow(QMainWindow):
         main_layout.addLayout(button_layout)
 
         self.logger.info("Chat window UI initialized")
+
+        # After creating all buttons and dropdowns, add them to the list
+        self.widgets_to_disable_when_recording = [
+            self.submit_button,
+            self.example_button,
+            self.new_session_button,
+            self.provider_dropdown,
+            self.model_dropdown,
+            self.input_text,  # Disable the input text area as well
+        ]
 
     def setup_input_placeholder(self):
         self.placeholder_text = "Enter text here..."
@@ -445,3 +584,166 @@ class ChatWindow(QMainWindow):
 
     def update_submit_button_state(self):
         self.submit_button.setEnabled(bool(self.input_text.toPlainText().strip()))
+
+    def toggle_recording(self):
+        if not hasattr(self, "is_recording"):
+            self.is_recording = False
+
+        if not self.is_recording:
+            self.start_recording()
+        else:
+            self.stop_recording()
+
+    def start_recording(self):
+        self.is_recording = True
+        self.set_record_button_style(True)
+
+        # Disable widgets
+        for widget in self.widgets_to_disable_when_recording:
+            widget.setEnabled(False)
+
+        # Save the original HTML content
+        self.original_html = self.input_text.toHtml()
+        self.logger.info(f"Original HTML: {self.original_html}")
+
+        # Check if the text box is empty or contains only placeholder text
+        if (
+            self.input_text.toPlainText().strip() == ""
+            or self.input_text.toPlainText() == self.placeholder_text
+        ):
+            self.logger.info("Text box is empty or contains only placeholder text")
+            # If empty, set HTML directly without any paragraph tags
+            self.input_text.setHtml('<span style="color: white;">Recording...</span>')
+        else:
+            self.logger.info("Text box contains content")
+            # Change text color to light gray while preserving formatting
+            modified_html = self.original_html.replace(
+                "color:#000000;", "color:#808080;"
+            )
+            modified_html = modified_html.replace("color:#ffffff;", "color:#808080;")
+
+            # If there's no color specified, add it
+            if "color:#808080;" not in modified_html:
+                modified_html = modified_html.replace(
+                    '<body style="', '<body style="color:#808080; '
+                )
+
+            # Add "Recording..." in white at the end, without extra line break
+            recording_html = '<span style="color: white;">Recording...</span>'
+
+            # Always add the recording text at the end
+            modified_html = modified_html.replace(
+                "</body></html>", f"{recording_html}</body></html>"
+            )
+
+            self.logger.info(f"Modified HTML before setting: {modified_html}")
+            self.input_text.setHtml(modified_html)
+
+        self.input_text.setReadOnly(True)
+
+        # Scroll to show the "Recording..." text
+        self.scroll_to_bottom()
+
+        self.logger.info(f"Final HTML after setting: {self.input_text.toHtml()}")
+
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
+            filename = temp_file.name
+        self.recorder = AudioRecorder(filename, self.logger)
+        self.recorder.finished.connect(self.on_recording_finished)
+        self.recorder.start()
+        self.logger.info("Recording started")
+
+    def stop_recording(self):
+        if self.recorder:
+            self.logger.info(f"Stop recording clicked at: {time.time():.2f}")
+            self.recorder.stop()
+        self.is_recording = False
+        self.set_record_button_style(False)
+
+        self.scroll_to_bottom()
+
+        # Re-enable widgets
+        for widget in self.widgets_to_disable_when_recording:
+            widget.setEnabled(True)
+        self.logger.info("Recording stopped")
+
+    def set_record_button_style(self, is_recording):
+        self.record_button.setIcon(
+            self.red_mic_icon if is_recording else self.green_mic_icon
+        )
+
+    def on_recording_finished(self, filename, recording_duration):
+        self.logger.info(f"Recording saved to: {filename}")
+        self.logger.info(f"Total recording time: {recording_duration:.2f} seconds")
+        transcription_start = time.time()
+        self.transcribe_audio(filename)
+        transcription_end = time.time()
+        self.logger.info(
+            f"Total time from recording stop to transcription complete: {transcription_end - transcription_start:.2f} seconds"
+        )
+
+    def transcribe_audio(self, filename):
+        self.logger.info("transcribe_audio method called")
+        progress_dialog = QProgressDialog("Transcribing audio...", None, 0, 0, self)
+        progress_dialog.setWindowTitle("Please Wait")
+        progress_dialog.setWindowModality(Qt.WindowModal)
+        progress_dialog.setAutoClose(True)
+        progress_dialog.setAutoReset(True)
+        progress_dialog.setMinimumDuration(0)
+        progress_dialog.setValue(0)
+        progress_dialog.setMaximum(0)  # This makes it an indeterminate progress dialog
+        progress_dialog.show()
+
+        self.transcription_thread = TranscriptionThread(
+            self.whisper_model, filename, self.logger
+        )
+        self.transcription_thread.finished.connect(self.on_transcription_finished)
+        self.transcription_thread.finished.connect(progress_dialog.close)
+        self.transcription_thread.start()
+        self.logger.info("Transcription thread started")
+
+    def on_transcription_finished(self, transcribed_text):
+        self.logger.info("on_transcription_finished method called")
+        self.logger.info(f"Transcribed text: {transcribed_text}")
+        self.logger.info(f"Original HTML: {self.original_html}")
+
+        transcribed_text = (
+            transcribed_text.strip()
+        )  # Remove any leading/trailing whitespace
+
+        if not self.original_html.strip():
+            self.logger.info("No original text, setting transcribed text directly")
+            self.input_text.setPlainText(transcribed_text)
+        else:
+            self.logger.info("Original text exists, appending transcribed text")
+            self.input_text.setHtml(self.original_html)
+            cursor = self.input_text.textCursor()
+            cursor.movePosition(cursor.End)
+
+            existing_text = self.input_text.toPlainText()
+            self.logger.info(f"Existing text: '{existing_text}'")
+
+            if existing_text and not existing_text.endswith((" ", "\n")):
+                self.logger.info("Adding space before transcribed text")
+                cursor.insertText(" ")
+
+            cursor.insertText(transcribed_text)
+
+        self.input_text.setReadOnly(False)
+        self.scroll_to_bottom()
+
+        final_text = self.input_text.toPlainText()
+        self.logger.info(f"Final text: '{final_text}'")
+
+        # Clear the original HTML
+        self.original_html = ""
+
+    def scroll_to_bottom(self):
+        # Move cursor to the end of the text
+        cursor = self.input_text.textCursor()
+        cursor.movePosition(cursor.End)
+        self.input_text.setTextCursor(cursor)
+
+        # Scroll to the bottom
+        scrollbar = self.input_text.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())

@@ -14,3 +14,7 @@ pygments
 flake8
 flake8-unused-arguments
 autoflake
+openai-whisper
+sounddevice
+scipy
+ffmpeg-python
