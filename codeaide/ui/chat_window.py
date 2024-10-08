@@ -40,12 +40,12 @@ from codeaide.utils.constants import (
 )
 from codeaide.utils.logging_config import get_logger
 from codeaide.ui.traceback_dialog import TracebackDialog
-import os
 import time
 import sounddevice as sd
 import numpy as np
 from scipy.io import wavfile
 import whisper
+import tempfile
 
 
 class AudioRecorder(QThread):
@@ -646,7 +646,8 @@ class ChatWindow(QMainWindow):
 
         self.logger.info(f"Final HTML after setting: {self.input_text.toHtml()}")
 
-        filename = os.path.expanduser("~/recorded_audio.wav")
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
+            filename = temp_file.name
         self.recorder = AudioRecorder(filename, self.logger)
         self.recorder.finished.connect(self.on_recording_finished)
         self.recorder.start()
