@@ -38,7 +38,7 @@ https://github.com/user-attachments/assets/8aa729ff-c431-4a61-a9ef-d17050a27d02
 
 2. Create a Conda environment:
    ```
-   conda create -n codeaide python=3.8
+   conda create -n codeaide python=3.11
    conda activate codeaide
    ```
 
