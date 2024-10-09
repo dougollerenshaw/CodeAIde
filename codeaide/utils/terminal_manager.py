@@ -180,7 +180,7 @@ class TerminalManager:
         atexit.register(self.cleanup)
 
     def run_script(self, script_path, requirements_path):
-        # Install requirements
+        # Install only new requirements
         new_packages = self.env_manager.install_requirements(requirements_path)
 
         # Get activation command
@@ -203,6 +203,8 @@ class TerminalManager:
 
     def _create_script_content(self, script_path, activation_command, new_packages):
         script_name = os.path.basename(script_path)
+        python_executable = self.env_manager.get_python_executable()
+
         script_content = f"""
         clear # Clear the terminal
         echo "Activating environment..."
@@ -216,7 +218,7 @@ class TerminalManager:
 
         script_content += f"""
         echo "Running {script_name}..."
-        python "{script_path}"
+        "{python_executable}" "{script_path}"
         echo "Script execution completed."
         """
         return script_content

@@ -26,7 +26,7 @@ https://github.com/user-attachments/assets/8aa729ff-c431-4a61-a9ef-d17050a27d02
 
 ### Prerequisites
 
-- Python 3.8 or higher
+- Python 3.9 or higher
 
 ### Setup
 
