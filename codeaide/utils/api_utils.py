@@ -6,6 +6,7 @@ from decouple import AutoConfig
 import hjson
 import re
 from google.generativeai.types import GenerationConfig
+from google.api_core import exceptions as google_exceptions
 
 from codeaide.utils.constants import (
     AI_PROVIDERS,
@@ -119,24 +120,29 @@ def send_api_request(api_client, conversation_history, max_tokens, model, provid
             if not response.choices:
                 return None
         elif provider.lower() == "google":
-            # Convert conversation history to the format expected by Google Gemini
-            prompt = ""
-            for message in conversation_history:
-                role = message["role"]
-                content = message["content"]
-                prompt += f"{role.capitalize()}: {content}\n\n"
+            try:
+                prompt = ""
+                for message in conversation_history:
+                    role = message["role"]
+                    content = message["content"]
+                    prompt += f"{role.capitalize()}: {content}\n\n"
 
-            # Create a GenerationConfig object
-            generation_config = GenerationConfig(
-                max_output_tokens=max_tokens,
-                temperature=0.7,  # You can adjust this as needed
-                top_p=0.95,  # You can adjust this as needed
-                top_k=40,  # You can adjust this as needed
-            )
+                # Create a GenerationConfig object
+                generation_config = GenerationConfig(
+                    max_output_tokens=max_tokens,
+                    temperature=0.7,  # You can adjust this as needed
+                    top_p=0.95,  # You can adjust this as needed
+                    top_k=40,  # You can adjust this as needed
+                )
 
-            response = api_client.generate_content(
-                contents=prompt, generation_config=generation_config
-            )
+                response = api_client.generate_content(
+                    contents=prompt, generation_config=generation_config
+                )
+            except google_exceptions.ResourceExhausted:
+                logger.error("Google API quota exceeded")
+                raise QuotaExceededException(
+                    "Your quota has been exceeded. You might need to wait briefly before trying again or try using a different model."
+                )
         else:
             raise NotImplementedError(f"API request for {provider} not implemented")
 
@@ -145,6 +151,8 @@ def send_api_request(api_client, conversation_history, max_tokens, model, provid
         return response
     except Exception as e:
         logger.error(f"Error in API request to {provider}: {str(e)}")
+        if isinstance(e, QuotaExceededException):
+            raise
         return None
 
 
@@ -240,3 +248,8 @@ def check_api_connection():
 if __name__ == "__main__":
     success, message = check_api_connection()
     logger.info(f"Connection {'successful' if success else 'failed'}: {message}")
+
+
+# Add this new exception class at the end of the file
+class QuotaExceededException(Exception):
+    pass

@@ -7,6 +7,7 @@ from codeaide.utils.api_utils import (
     send_api_request,
     get_api_client,
     save_api_key,
+    QuotaExceededException,
 )
 from codeaide.utils.constants import (
     MAX_RETRIES,
@@ -224,18 +225,20 @@ class ChatHandler(QObject):
             self.add_user_input_to_history(user_input)
 
             for attempt in range(MAX_RETRIES):
-                response = self.get_ai_response()
-                if response is None:
-                    if self.is_last_attempt(attempt):
-                        return self.create_error_response(
-                            "Failed to get a response from the AI. Please try again."
-                        )
-                    continue
-
-                self.cost_tracker.log_request(response)
-
                 try:
+                    response = self.get_ai_response()
+                    if response is None:
+                        if self.is_last_attempt(attempt):
+                            return self.create_error_response(
+                                "Failed to get a response from the AI. Please try again."
+                            )
+                        continue
+
+                    self.cost_tracker.log_request(response)
+
                     return self.process_ai_response(response)
+                except QuotaExceededException as e:
+                    return self.create_error_response(str(e))
                 except ValueError as e:
                     self.logger.error(f"ValueError: {str(e)}\n")
                     if not self.is_last_attempt(attempt):
