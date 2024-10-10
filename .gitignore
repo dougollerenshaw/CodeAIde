@@ -39,3 +39,6 @@ dist/
 
 # Ignore .dmg files
 *.dmg
+
+# Ignore .egg-info directories
+*.egg-info/
