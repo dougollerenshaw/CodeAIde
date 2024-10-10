@@ -12,7 +12,7 @@ from codeaide.utils.constants import (
     SYSTEM_PROMPT,
 )
 from codeaide.utils.logging_config import get_logger
-from codeaid.utils.config_manager import ConfigManager
+from codeaide.utils.config_manager import ConfigManager
 
 logger = get_logger()
 config_manager = ConfigManager()
