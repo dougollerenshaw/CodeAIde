@@ -116,7 +116,7 @@ class ChatHandler(QObject):
                 "2. Navigate to your account settings or API section.\n"
                 "3. Generate a new API key.\n"
                 "4. Add some funds to your account to cover the cost of using the API (start with as little as $1).\n"
-                "5. Copy the API key and paste it here.\n\n"
+                "5. Copy the API key and paste it in the chat window below.\n\n"
                 "Once you've pasted your API key, I'll save it securely in a .env file in the root of your project. "
                 "This file is already in .gitignore, so it won't be shared if you push your code to a repository.\n\n"
                 "Please paste your Anthropic API key now:"
@@ -128,13 +128,28 @@ class ChatHandler(QObject):
                 "1. Go to https://platform.openai.com/api-keys and sign in to your OpenAI account or create an account if you don't have one.\n"
                 "2. Generate a new API key.\n"
                 "3. Add some funds to your account to cover the cost of using the API (start with as little as $1).\n"
-                "4. Copy the API key and paste it here.\n\n"
+                "4. Copy the API key and paste it in the chat window below.\n\n"
                 "Once you've pasted your API key, I'll save it securely in a .env file in the root of your project. "
                 "This file is already in .gitignore, so it won't be shared if you push your code to a repository.\n\n"
                 "Please paste your OpenAI API key now:"
             )
+        elif provider == "google":
+            return (
+                "It looks like you haven't set up your Google API key yet. "
+                "Here's how to get started:\n\n"
+                "1. Go to https://aistudio.google.com/app/apikey\n"
+                "2. Click on the 'Create API Key' button.\n"
+                "3. Copy the generated API key and paste it in the chat window below.\n\n"
+                "Important notes about the Google API:\n"
+                "- The Google API is free to use as long as you don't exceed the requests per minute limit.\n"
+                "- For Gemini Pro, the limit is 2 requests per minute.\n"
+                "- For Gemini Flash, the limit is 15 requests per minute.\n\n"
+                "Once you've pasted your API key, I'll save it securely in a .env file in the root of your project. "
+                "This file is already in .gitignore, so it won't be shared if you push your code to a repository.\n\n"
+                "Please paste your Google API key now:"
+            )
         else:
-            return f"Please enter your API key for {provider.capitalize()}:"
+            return f"You don't have an API key set up for {provider}. Please choose another API provider."
 
     def validate_api_key(self, api_key):
         """

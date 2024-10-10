@@ -4,7 +4,7 @@
 # The default model for each provider will be the first model in the list
 AI_PROVIDERS = {
     "google": {
-        "api_key_name": "GEMINI_API_KEY",
+        "api_key_name": "GOOGLE_API_KEY",
         "models": {
             "gemini-1.5-pro": {"max_tokens": 8192},
             "gemini-1.5-flash": {"max_tokens": 8192},
