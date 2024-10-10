@@ -1,5 +1,15 @@
 # API Configuration
+# This dictionary defines the supported API providers and the supported models for each.
+# The max_tokens argument is the max output tokens, which is generally specified in the API documentation
+# The default model for each provider will be the first model in the list
 AI_PROVIDERS = {
+    "google": {
+        "api_key_name": "GEMINI_API_KEY",
+        "models": {
+            "gemini-1.5-pro": {"max_tokens": 8192},
+            "gemini-1.5-flash": {"max_tokens": 8192},
+        },
+    },
     "anthropic": {
         "api_key_name": "ANTHROPIC_API_KEY",
         "models": {
@@ -19,9 +29,8 @@ AI_PROVIDERS = {
     },
 }
 
-# Default model
-DEFAULT_MODEL = "claude-3-5-sonnet-20240620"
-DEFAULT_PROVIDER = "anthropic"
+# This sets the default provider when the application launches
+DEFAULT_PROVIDER = "google"
 
 # Other existing constants remain unchanged
 MAX_RETRIES = 3
@@ -104,10 +113,11 @@ Code Formatting Guidelines:
 * Ensure that newlines in string literals are properly contained within the string delimiters and do not break the code structure.
 * Add inline comments to explain complex parts of the code or to provide additional context where necessary. However, avoid excessive commenting that may clutter the code.
 * All code must be contained within a single file. If the code requires multiple classes or functions, include them all in the same code block.
+* Do not include triple backticks ("```") or language identifiers in the code block.
 
 Remember, the goal is to provide valuable, working code solutions while maintaining a balance between making reasonable assumptions and seeking clarification when truly necessary.
 Format your responses as a JSON object with six keys:
-* 'text': a string that contains any natural language explanations or comments that you think are helpful for the user. This should never be null or incomplete. If you mention providing a list or explanation, ensure it is fully included here. If you have no text response, provide a brief explanation of the code or the assumptions made.
+* 'text': a string that contains any natural language explanations or comments that you think are helpful for the user. This should never be null or incomplete. If you mention providing a list or explanation, ensure it is fully included here. If you have no text response, provide a brief explanation of the code or the assumptions made. Use plain text, not markdown.
 * 'questions': an array of strings that pose necessary follow-up questions to the user
 * 'code': a string with the properly formatted, complete code block. This must include all necessary components for the code to run, including any previously implemented methods or classes. This should be null only if you have questions or text responses but no code to provide.
 * 'code_version': a string that represents the version of the code. Start at 1.0 and increment for each new version of the code you provide. Use your judgement on whether to increment the minor or major component of the version. It is critical that version numbers never be reused during a chat and that the numbers always increment upward. This field should be null if you have no code to provide.

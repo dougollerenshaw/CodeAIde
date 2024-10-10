@@ -11,7 +11,6 @@ from codeaide.utils.api_utils import (
 from codeaide.utils.constants import (
     MAX_RETRIES,
     AI_PROVIDERS,
-    DEFAULT_MODEL,
     DEFAULT_PROVIDER,
     INITIAL_MESSAGE,
 )
@@ -57,7 +56,9 @@ class ChatHandler(QObject):
         self.api_client = None
         self.api_key_set = False
         self.current_provider = DEFAULT_PROVIDER
-        self.current_model = DEFAULT_MODEL
+        self.current_model = list(AI_PROVIDERS[self.current_provider]["models"].keys())[
+            0
+        ]
         self.max_tokens = AI_PROVIDERS[self.current_provider]["models"][
             self.current_model
         ]["max_tokens"]
@@ -346,8 +347,17 @@ class ChatHandler(QObject):
             self.conversation_history.append(
                 {"role": "assistant", "content": response.choices[0].message.content}
             )
+        elif self.current_provider.lower() == "google":
+            self.conversation_history.append(
+                {
+                    "role": "assistant",
+                    "content": response.candidates[0].content.parts[0].text,
+                }
+            )
         else:
-            raise ValueError(f"Unsupported provider: {self.current_provider}")
+            raise ValueError(
+                f"In update_conversation_history, unsupported provider: {self.current_provider}"
+            )
         self.file_handler.save_chat_history(self.conversation_history)
 
     def create_questions_response(self, text, questions):

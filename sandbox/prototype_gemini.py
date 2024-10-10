@@ -5,10 +5,11 @@ This is a little sandbox script to test out the Gemini API.
 import argparse
 from decouple import config
 import google.generativeai as genai
+from codeaide.utils.constants import SYSTEM_PROMPT
 
 genai.configure(api_key=config("GEMINI_API_KEY"))
 
-model = genai.GenerativeModel("gemini-1.5-flash")
+model = genai.GenerativeModel("gemini-1.5-pro", system_instruction=SYSTEM_PROMPT)
 
 
 def generate_a_story():

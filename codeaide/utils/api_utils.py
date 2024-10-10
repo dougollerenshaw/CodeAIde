@@ -1,12 +1,13 @@
 import os
 import anthropic
 import openai
+import google.generativeai as genai
 from decouple import AutoConfig
 import hjson
+from google.generativeai.types import GenerationConfig
 
 from codeaide.utils.constants import (
     AI_PROVIDERS,
-    DEFAULT_MODEL,
     DEFAULT_PROVIDER,
     SYSTEM_PROMPT,
 )
@@ -23,7 +24,7 @@ class MissingAPIKeyException(Exception):
         )
 
 
-def get_api_client(provider=DEFAULT_PROVIDER, model=DEFAULT_MODEL):
+def get_api_client(provider=DEFAULT_PROVIDER, model=None):
     try:
         root_dir = os.path.dirname(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -47,8 +48,12 @@ def get_api_client(provider=DEFAULT_PROVIDER, model=DEFAULT_MODEL):
             return anthropic.Anthropic(api_key=api_key)
         elif provider.lower() == "openai":
             return openai.OpenAI(api_key=api_key)
+        elif provider.lower() == "google":
+            genai.configure(api_key=api_key)
+            client = genai.GenerativeModel(model, system_instruction=SYSTEM_PROMPT)
+            return client
         else:
-            raise ValueError(f"Unsupported provider: {provider}")
+            raise ValueError(f"In get_api_client, unsupported provider: {provider}")
     except Exception as e:
         logger.error(f"Error initializing {provider.capitalize()} API client: {str(e)}")
         return None
@@ -112,6 +117,25 @@ def send_api_request(api_client, conversation_history, max_tokens, model, provid
             )
             if not response.choices:
                 return None
+        elif provider.lower() == "google":
+            # Convert conversation history to the format expected by Google Gemini
+            prompt = ""
+            for message in conversation_history:
+                role = message["role"]
+                content = message["content"]
+                prompt += f"{role.capitalize()}: {content}\n\n"
+
+            # Create a GenerationConfig object
+            generation_config = GenerationConfig(
+                max_output_tokens=max_tokens,
+                temperature=0.7,  # You can adjust this as needed
+                top_p=0.95,  # You can adjust this as needed
+                top_k=40,  # You can adjust this as needed
+            )
+
+            response = api_client.generate_content(
+                contents=prompt, generation_config=generation_config
+            )
         else:
             raise NotImplementedError(f"API request for {provider} not implemented")
 
@@ -137,8 +161,10 @@ def parse_response(response, provider):
         if not response.choices:
             raise ValueError("Empty or invalid response received")
         json_str = response.choices[0].message.content
+    elif provider.lower() == "google":
+        json_str = response.candidates[0].content.parts[0].text
     else:
-        raise ValueError(f"Unsupported provider: {provider}")
+        raise ValueError(f"In parse_response, unsupported provider: {provider}")
 
     # Remove the triple backticks and language identifier if present
     if json_str.startswith("```json"):
@@ -172,8 +198,10 @@ def check_api_connection():
     if client is None:
         return False, "API key is missing or invalid"
     try:
+        provider = DEFAULT_PROVIDER
+        model = list(AI_PROVIDERS[provider]["models"].keys())[0]
         response = client.messages.create(
-            model=DEFAULT_MODEL,
+            model=model,
             max_tokens=100,
             messages=[{"role": "user", "content": "Are we communicating?"}],
         )
