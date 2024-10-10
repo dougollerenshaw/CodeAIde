@@ -106,8 +106,10 @@ class CodeEditor(QPlainTextEdit):
 
         block = self.firstVisibleBlock()
         block_number = block.blockNumber()
-        top = self.blockBoundingGeometry(block).translated(self.contentOffset()).top()
-        bottom = top + self.blockBoundingRect(block).height()
+        top = round(
+            self.blockBoundingGeometry(block).translated(self.contentOffset()).top()
+        )
+        bottom = top + round(self.blockBoundingRect(block).height())
 
         while block.isValid() and top <= event.rect().bottom():
             if block.isVisible() and bottom >= event.rect().top():
@@ -123,7 +125,7 @@ class CodeEditor(QPlainTextEdit):
                 )
             block = block.next()
             top = bottom
-            bottom = top + self.blockBoundingRect(block).height()
+            bottom = top + round(self.blockBoundingRect(block).height())
             block_number += 1
 
 

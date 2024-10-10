@@ -1,6 +1,7 @@
 import os
 import subprocess
 import venv
+import shutil
 from codeaide.utils.logging_config import get_logger
 
 logger = get_logger()
@@ -45,11 +46,6 @@ class EnvironmentManager:
             logger.error(f"Error getting installed packages: {e}")
 
     def install_requirements(self, requirements_file):
-        pip_path = (
-            os.path.join(self.env_path, "bin", "pip")
-            if os.name != "nt"
-            else os.path.join(self.env_path, "Scripts", "pip.exe")
-        )
         with open(requirements_file, "r") as f:
             required_packages = {line.strip().lower() for line in f if line.strip()}
 
@@ -58,9 +54,14 @@ class EnvironmentManager:
         if packages_to_install:
             packages_str = " ".join(packages_to_install)
             logger.info(f"Installing new packages: {packages_str}")
+            pip_path = (
+                os.path.join(self.env_path, "bin", "pip")
+                if os.name != "nt"
+                else os.path.join(self.env_path, "Scripts", "pip.exe")
+            )
             try:
                 subprocess.run(
-                    f"{pip_path} install {packages_str}", shell=True, check=True
+                    f'"{pip_path}" install {packages_str}', shell=True, check=True
                 )
                 self.installed_packages.update(packages_to_install)
                 logger.info(
@@ -86,3 +87,16 @@ class EnvironmentManager:
             if os.name == "nt"
             else f"source {activation_path}"
         )
+
+    def get_python_executable(self):
+        if os.name == "nt":  # Windows
+            return os.path.join(self.env_path, "Scripts", "python.exe")
+        else:  # Unix-like
+            return os.path.join(self.env_path, "bin", "python")
+
+    def recreate_environment(self):
+        logger.info(f"Recreating virtual environment at {self.env_path}")
+        if os.path.exists(self.env_path):
+            shutil.rmtree(self.env_path)
+        self._setup_environment()
+        self._get_installed_packages()
