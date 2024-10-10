@@ -1,5 +1,5 @@
 anthropic==0.34.2
-python-decouple==3.8
+python-decouple
 virtualenv==20.16.2
 numpy==1.26.4
 openai
