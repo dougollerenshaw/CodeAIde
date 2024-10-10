@@ -46,6 +46,7 @@ import numpy as np
 from scipy.io import wavfile
 import whisper
 import tempfile
+from codeaide.utils.general_utils import get_resource_path
 
 
 class AudioRecorder(QThread):
@@ -139,12 +140,8 @@ class ChatWindow(QMainWindow):
         self.is_recording = False
 
         # Load microphone icons
-        self.green_mic_icon = QIcon(
-            general_utils.get_resource_path("codeaide/assets/green_mic.png")
-        )
-        self.red_mic_icon = QIcon(
-            general_utils.get_resource_path("codeaide/assets/red_mic.png")
-        )
+        self.green_mic_icon = QIcon(get_resource_path("assets/green_mic.png"))
+        self.red_mic_icon = QIcon(get_resource_path("assets/red_mic.png"))
 
         self.setup_ui()
         self.setup_input_placeholder()
