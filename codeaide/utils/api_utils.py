@@ -4,6 +4,7 @@ import openai
 import google.generativeai as genai
 from decouple import AutoConfig
 import hjson
+import re
 from google.generativeai.types import GenerationConfig
 
 from codeaide.utils.constants import (
@@ -151,7 +152,7 @@ def parse_response(response, provider):
     if not response:
         raise ValueError("Empty or invalid response received")
 
-    logger.debug(f"Received response: {response}")
+    logger.info(f"Received response: {response}")
 
     if provider.lower() == "anthropic":
         if not response.content:
@@ -190,7 +191,33 @@ def parse_response(response, provider):
     requirements = outer_json.get("requirements", [])
     questions = outer_json.get("questions", [])
 
+    # Clean the code if it exists
+    if code:
+        code = clean_code(code)
+
     return text, questions, code, code_version, version_description, requirements
+
+
+def clean_code(code):
+    """
+    Clean the code by removing triple backticks and language identifiers.
+
+    Args:
+        code (str): The code string to clean.
+
+    Returns:
+        str: The cleaned code string.
+    """
+    # Remove triple backticks and language identifier at the start
+    code = re.sub(r"^```[\w-]*\n", "", code, flags=re.MULTILINE)
+
+    # Remove triple backticks at the end
+    code = re.sub(r"\n```$", "", code, flags=re.MULTILINE)
+
+    # Trim any leading or trailing whitespace
+    code = code.strip()
+
+    return code
 
 
 def check_api_connection():

@@ -335,9 +335,6 @@ class ChatWindow(QMainWindow):
             f"ChatWindow: call_process_input_async called with input: {user_input[:50]}..."
         )
         response = self.chat_handler.process_input(user_input)
-        self.logger.info(
-            f"ChatWindow: Received response from chat handler: {str(response)[:50]}..."
-        )
         self.handle_response(response)
 
     def on_modify(self):
