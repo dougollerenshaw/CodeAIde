@@ -12,7 +12,6 @@ from codeaide.logic.chat_handler import ChatHandler
 from codeaide.utils.constants import (
     AI_PROVIDERS,
     DEFAULT_PROVIDER,
-    DEFAULT_MODEL,
     MODEL_SWITCH_MESSAGE,
 )
 
@@ -82,11 +81,7 @@ def test_model_switching(chat_window, mock_chat_handler, caplog):
     test_provider = next(
         provider for provider in AI_PROVIDERS.keys() if provider != DEFAULT_PROVIDER
     )
-    test_model = next(
-        model
-        for model in AI_PROVIDERS[test_provider]["models"].keys()
-        if model != DEFAULT_MODEL
-    )
+    test_model = list(AI_PROVIDERS[test_provider]["models"].keys())[0]
 
     window.provider_dropdown.setCurrentText(test_provider)
     window.model_dropdown.setCurrentText(test_model)
