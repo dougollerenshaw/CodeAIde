@@ -136,7 +136,7 @@ class ChatWindow(QMainWindow):
         self.code_popup = None
         self.waiting_for_api_key = False
         self.chat_contents = []
-        self.original_text = ""  # Add this line to store the original text
+        self.is_recording = False
 
         # Load microphone icons
         self.green_mic_icon = QIcon(
@@ -586,7 +586,10 @@ class ChatWindow(QMainWindow):
             self.logger.info("ChatWindow: User chose to ignore the traceback")
 
     def update_submit_button_state(self):
-        self.submit_button.setEnabled(bool(self.input_text.toPlainText().strip()))
+        if not self.is_recording:
+            self.submit_button.setEnabled(bool(self.input_text.toPlainText().strip()))
+        else:
+            self.submit_button.setEnabled(False)
 
     def toggle_recording(self):
         if not hasattr(self, "is_recording"):
