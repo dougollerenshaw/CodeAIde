@@ -194,7 +194,7 @@ class ChatWindow(QMainWindow):
 
         # Model dropdown
         self.model_dropdown = QComboBox()
-        self.update_model_dropdown(DEFAULT_PROVIDER)
+        self.update_model_dropdown(DEFAULT_PROVIDER, add_message_to_chat=False)
         self.model_dropdown.currentTextChanged.connect(self.update_chat_handler)
         dropdown_layout.addWidget(QLabel("Model:"))
         dropdown_layout.addWidget(self.model_dropdown)
@@ -335,9 +335,6 @@ class ChatWindow(QMainWindow):
             f"ChatWindow: call_process_input_async called with input: {user_input[:50]}..."
         )
         response = self.chat_handler.process_input(user_input)
-        self.logger.info(
-            f"ChatWindow: Received response from chat handler: {str(response)[:50]}..."
-        )
         self.handle_response(response)
 
     def on_modify(self):
@@ -474,16 +471,22 @@ class ChatWindow(QMainWindow):
     def sigint_handler(self, *args):
         QApplication.quit()
 
-    def update_model_dropdown(self, provider):
+    def update_model_dropdown(self, provider, add_message_to_chat=False):
         self.model_dropdown.clear()
         models = AI_PROVIDERS[provider]["models"].keys()
         self.model_dropdown.addItems(models)
 
-        # Set the current item to the first model in the list
+        # Set the current item to the first model in the list (default)
         if models:
-            self.model_dropdown.setCurrentText(list(models)[0])
+            default_model = list(models)[0]
+            self.model_dropdown.setCurrentText(default_model)
+            self.logger.info(f"Set default model for {provider} to {default_model}")
         else:
             self.logger.info(f"No models available for provider {provider}")
+
+        # Update the chat handler with the selected model if add_message_to_chat is True
+        if add_message_to_chat:
+            self.update_chat_handler()
 
     def update_chat_handler(self):
         provider = self.provider_dropdown.currentText()

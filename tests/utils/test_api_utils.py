@@ -12,8 +12,6 @@ from codeaide.utils.api_utils import (
     get_api_client,
 )
 from codeaide.utils.constants import (
-    DEFAULT_MODEL,
-    DEFAULT_PROVIDER,
     SYSTEM_PROMPT,
     AI_PROVIDERS,
 )
@@ -28,8 +26,7 @@ pytestmark = [
     pytest.mark.api_connection,
 ]
 
-# Get the max_tokens value from the AI_PROVIDERS dictionary
-MAX_TOKENS = AI_PROVIDERS[DEFAULT_PROVIDER]["models"][DEFAULT_MODEL]["max_tokens"]
+MAX_TOKENS = 100  # Define this at the top of the file for use in tests
 
 
 @pytest.fixture
@@ -222,12 +219,13 @@ class TestSendAPIRequest:
         mock_client.chat.completions.create.return_value = mock_response
         mock_openai.return_value = mock_client
 
+        model = list(AI_PROVIDERS["openai"]["models"].keys())[0]
         result = send_api_request(
-            mock_client, conversation_history, MAX_TOKENS, DEFAULT_MODEL, "openai"
+            mock_client, conversation_history, MAX_TOKENS, model, "openai"
         )
 
         mock_client.chat.completions.create.assert_called_once_with(
-            model=DEFAULT_MODEL,
+            model=model,
             max_tokens=MAX_TOKENS,
             messages=[{"role": "system", "content": SYSTEM_PROMPT}]
             + conversation_history,
@@ -247,12 +245,13 @@ class TestSendAPIRequest:
         mock_client.messages.create.return_value = mock_response
         mock_anthropic.return_value = mock_client
 
+        model = list(AI_PROVIDERS["anthropic"]["models"].keys())[0]
         result = send_api_request(
-            mock_client, conversation_history, MAX_TOKENS, DEFAULT_MODEL, "anthropic"
+            mock_client, conversation_history, MAX_TOKENS, model, "anthropic"
         )
 
         mock_client.messages.create.assert_called_once_with(
-            model=DEFAULT_MODEL,
+            model=model,
             max_tokens=MAX_TOKENS,
             messages=conversation_history,
             system=SYSTEM_PROMPT,
@@ -283,11 +282,12 @@ class TestSendAPIRequest:
             body={"error": {"message": "API Error"}},
         )
 
+        model = list(AI_PROVIDERS["anthropic"]["models"].keys())[0]
         result = send_api_request(
             mock_anthropic_client,
             conversation_history,
             MAX_TOKENS,
-            DEFAULT_MODEL,
+            model,
             "anthropic",
         )
 
@@ -318,16 +318,17 @@ class TestSendAPIRequest:
         mock_response.content = [Mock(text="Hello! How can I assist you today?")]
         mock_anthropic_client.messages.create.return_value = mock_response
 
+        model = list(AI_PROVIDERS["anthropic"]["models"].keys())[0]
         result = send_api_request(
             mock_anthropic_client,
             conversation_history,
             custom_max_tokens,
-            DEFAULT_MODEL,
+            model,
             "anthropic",
         )
 
         mock_anthropic_client.messages.create.assert_called_once_with(
-            model=DEFAULT_MODEL,
+            model=model,
             max_tokens=custom_max_tokens,
             messages=conversation_history,
             system=SYSTEM_PROMPT,
