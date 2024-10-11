@@ -4,6 +4,7 @@ from PyQt5.QtGui import QFont, QColor
 from datetime import datetime
 from codeaide.utils.logging_config import get_logger
 import sys
+from pathlib import Path
 
 logger = get_logger()
 
@@ -121,3 +122,15 @@ def generate_session_id():
     session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
     logger.info(f"Generated new session ID: {session_id}")
     return session_id
+
+
+def get_most_recent_log_file():
+    app_data_dir = Path.home() / "Library" / "Application Support" / "CodeAide"
+    if not app_data_dir.exists():
+        return None
+
+    log_files = list(app_data_dir.rglob("codeaide*.log"))
+    if not log_files:
+        return None
+
+    return str(max(log_files, key=os.path.getmtime))

@@ -1,4 +1,5 @@
 import signal
+import sys  # Add this import
 from PyQt5.QtCore import (
     Qt,
     QTimer,
@@ -19,6 +20,7 @@ from PyQt5.QtWidgets import (
     QComboBox,
     QLabel,
     QProgressDialog,
+    QAction,
 )
 from codeaide.ui.code_popup import CodePopup
 from codeaide.ui.example_selection_dialog import show_example_dialog
@@ -48,6 +50,9 @@ import whisper
 import tempfile
 from codeaide.utils.general_utils import get_resource_path
 import os
+import traceback
+import subprocess
+from codeaide.utils.general_utils import get_most_recent_log_file
 
 
 class AudioRecorder(QThread):
@@ -64,32 +69,50 @@ class AudioRecorder(QThread):
         RATE = 16000  # 16kHz to match Whisper's expected input
         self.is_recording = True
         self.start_time = time.time()
-        with sd.InputStream(samplerate=RATE, channels=1) as stream:
-            frames = []
-            while self.is_recording:
-                data, overflowed = stream.read(RATE)
-                if not overflowed:
+        self.logger.info(f"Starting audio recording with rate: {RATE}")
+
+        try:
+            with sd.InputStream(samplerate=RATE, channels=1) as stream:
+                self.logger.info("Audio stream opened successfully")
+                frames = []
+                while self.is_recording:
+                    data, overflowed = stream.read(RATE)
+                    if overflowed:
+                        self.logger.warning("Audio buffer overflowed")
                     frames.append(data)
+                    self.logger.debug(f"Recorded frame with shape: {data.shape}")
 
-        audio_data = np.concatenate(frames, axis=0)
-        self.logger.info(f"Raw audio data shape: {audio_data.shape}")
-        self.logger.info(
-            f"Raw audio data range: {audio_data.min()} to {audio_data.max()}"
-        )
+            self.logger.info(f"Recording stopped. Total frames: {len(frames)}")
+            audio_data = np.concatenate(frames, axis=0)
+            self.logger.info(f"Raw audio data shape: {audio_data.shape}")
+            self.logger.info(
+                f"Raw audio data range: {audio_data.min()} to {audio_data.max()}"
+            )
+            self.logger.info(f"Raw audio data mean: {audio_data.mean()}")
 
-        # Ensure audio data is in the correct range for int16
-        audio_data = np.clip(audio_data * 32768, -32768, 32767).astype(np.int16)
+            # Ensure audio data is in the correct range for int16
+            audio_data = np.clip(audio_data * 32768, -32768, 32767).astype(np.int16)
+            self.logger.info(
+                f"Processed audio data range: {audio_data.min()} to {audio_data.max()}"
+            )
 
-        wavfile.write(self.filename, RATE, audio_data)
-        end_time = time.time()
-        self.finished.emit(self.filename, end_time - self.start_time)
+            wavfile.write(self.filename, RATE, audio_data)
+            self.logger.info(f"Audio file written to: {self.filename}")
+
+            end_time = time.time()
+            self.finished.emit(self.filename, end_time - self.start_time)
+        except Exception as e:
+            self.logger.error(f"Error during audio recording: {str(e)}")
+            self.logger.error(traceback.format_exc())
 
     def stop(self):
         self.is_recording = False
+        self.logger.info("Stop recording requested")
 
 
 class TranscriptionThread(QThread):
     finished = pyqtSignal(str)
+    error = pyqtSignal(str)
 
     def __init__(self, whisper_model, filename, logger):
         super().__init__()
@@ -98,33 +121,45 @@ class TranscriptionThread(QThread):
         self.logger = logger
 
     def run(self):
-        self.logger.info("Transcribing audio...")
-        read_start = time.time()
-        # Read the WAV file
-        sample_rate, audio_data = wavfile.read(self.filename)
-        read_end = time.time()
-        self.logger.info(f"Time to read WAV file: {read_end - read_start:.2f} seconds")
+        try:
+            self.logger.info("Starting transcription")
+            read_start = time.time()
+            # Read the WAV file
+            sample_rate, audio_data = wavfile.read(self.filename)
+            read_end = time.time()
+            self.logger.info(
+                f"Time to read WAV file: {read_end - read_start:.2f} seconds"
+            )
 
-        self.logger.info(f"Audio shape: {audio_data.shape}, Sample rate: {sample_rate}")
-        self.logger.info(f"Audio duration: {len(audio_data) / sample_rate:.2f} seconds")
+            self.logger.info(
+                f"Audio shape: {audio_data.shape}, Sample rate: {sample_rate}"
+            )
+            self.logger.info(
+                f"Audio duration: {len(audio_data) / sample_rate:.2f} seconds"
+            )
 
-        # Convert to float32 and normalize
-        audio_data = audio_data.astype(np.float32) / 32768.0
+            # Convert to float32 and normalize
+            audio_data = audio_data.astype(np.float32) / 32768.0
 
-        self.logger.info(f"Audio data range: {audio_data.min()} to {audio_data.max()}")
+            self.logger.info(
+                f"Audio data range: {audio_data.min()} to {audio_data.max()}"
+            )
 
-        # Transcribe
-        transcribe_start = time.time()
-        result = self.whisper_model.transcribe(audio_data)
-        transcribe_end = time.time()
-        transcribed_text = result["text"].strip()
-        self.logger.info(f"Transcription: {transcribed_text}")
-        self.logger.info(
-            f"Time for Whisper to transcribe: {transcribe_end - transcribe_start:.2f} seconds"
-        )
-        self.logger.info("Transcription complete.")
-        self.logger.info(f"Emitting finished signal with text: {transcribed_text}")
-        self.finished.emit(transcribed_text)
+            # Transcribe
+            transcribe_start = time.time()
+            result = self.whisper_model.transcribe(audio_data)
+            transcribe_end = time.time()
+            self.logger.info(
+                f"Time to transcribe: {transcribe_end - transcribe_start:.2f} seconds"
+            )
+
+            transcribed_text = result["text"]
+            self.logger.info(f"Transcribed text: {transcribed_text}")
+            self.finished.emit(transcribed_text)
+        except Exception as e:
+            self.logger.error(f"Error in transcription: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            self.error.emit(str(e))
 
 
 class ChatWindow(QMainWindow):
@@ -149,11 +184,7 @@ class ChatWindow(QMainWindow):
         self.update_submit_button_state()
 
         # Initialize Whisper model
-        print("Loading Whisper model...")
-        model_path = get_resource_path("models/whisper")
-        os.makedirs(model_path, exist_ok=True)
-        self.whisper_model = whisper.load_model("tiny", download_root=model_path)
-        print("Whisper model loaded.")
+        QTimer.singleShot(100, self.load_whisper_model)
 
         # Check API key status
         if not self.chat_handler.api_key_valid:
@@ -170,6 +201,15 @@ class ChatWindow(QMainWindow):
         self.timer.timeout.connect(lambda: None)
 
         self.logger.info("Chat window initialized")
+
+        # Create menu bar
+        menubar = self.menuBar()
+        file_menu = menubar.addMenu("File")
+
+        # Add "Show Logs" to the File menu
+        show_logs_action = QAction("Show Logs", self)
+        show_logs_action.triggered.connect(self.show_logs)
+        file_menu.addAction(show_logs_action)
 
     def setup_ui(self):
         central_widget = QWidget(self)
@@ -689,7 +729,7 @@ class ChatWindow(QMainWindow):
         )
 
     def transcribe_audio(self, filename):
-        self.logger.info("transcribe_audio method called")
+        self.logger.info("Transcribing audio")
         progress_dialog = QProgressDialog("Transcribing audio...", None, 0, 0, self)
         progress_dialog.setWindowTitle("Please Wait")
         progress_dialog.setWindowModality(Qt.WindowModal)
@@ -704,7 +744,9 @@ class ChatWindow(QMainWindow):
             self.whisper_model, filename, self.logger
         )
         self.transcription_thread.finished.connect(self.on_transcription_finished)
+        self.transcription_thread.error.connect(self.on_transcription_error)
         self.transcription_thread.finished.connect(progress_dialog.close)
+        self.transcription_thread.error.connect(progress_dialog.close)
         self.transcription_thread.start()
         self.logger.info("Transcription thread started")
 
@@ -713,9 +755,7 @@ class ChatWindow(QMainWindow):
         self.logger.info(f"Transcribed text: {transcribed_text}")
         self.logger.info(f"Original HTML: {self.original_html}")
 
-        transcribed_text = (
-            transcribed_text.strip()
-        )  # Remove any leading/trailing whitespace
+        transcribed_text = transcribed_text.strip()
 
         if not self.original_html.strip():
             self.logger.info("No original text, setting transcribed text directly")
@@ -744,6 +784,14 @@ class ChatWindow(QMainWindow):
         # Clear the original HTML
         self.original_html = ""
 
+    def on_transcription_error(self, error_message):
+        self.logger.error(f"Transcription error: {error_message}")
+        QMessageBox.critical(
+            self,
+            "Transcription Error",
+            f"An error occurred during transcription: {error_message}",
+        )
+
     def scroll_to_bottom(self):
         # Move cursor to the end of the text
         cursor = self.input_text.textCursor()
@@ -753,3 +801,50 @@ class ChatWindow(QMainWindow):
         # Scroll to the bottom
         scrollbar = self.input_text.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
+
+    def load_whisper_model(self):
+        try:
+            self.logger.info("Loading Whisper model...")
+            model_path = get_resource_path("models/whisper")
+            model_file = os.path.join(model_path, "tiny.pt")
+
+            if not os.path.exists(model_file):
+                self.logger.warning(
+                    f"Whisper model not found at {model_file}. Attempting to download..."
+                )
+                whisper.load_model("tiny", download_root=model_path)
+
+            self.whisper_model = whisper.load_model("tiny", download_root=model_path)
+            self.logger.info("Whisper model loaded successfully.")
+        except Exception as e:
+            self.logger.error(f"Error loading Whisper model: {str(e)}")
+            self.logger.error(traceback.format_exc())
+            self.show_error_message(
+                f"Failed to load Whisper model. Speech-to-text may not work. Error: {str(e)}"
+            )
+
+    def show_error_message(self, message):
+        QMessageBox.critical(self, "Error", message)
+
+    def show_logs(self):
+        try:
+            if getattr(sys, "frozen", False):
+                # We are running in a bundle
+                log_file = get_most_recent_log_file()
+            else:
+                # We are running in a normal Python environment
+                log_file = os.path.join(self.chat_handler.session_dir, "codeaide.log")
+
+            if log_file and os.path.exists(log_file):
+                self.logger.info(f"Opening log file: {log_file}")
+                subprocess.run(["open", log_file])
+            else:
+                self.logger.warning("No log file found")
+                QMessageBox.information(self, "Logs Not Found", "No log file found.")
+        except Exception as e:
+            self.logger.error(f"Error opening log file: {str(e)}")
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"An error occurred while trying to open the log file: {str(e)}",
+            )

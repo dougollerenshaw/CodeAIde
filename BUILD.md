@@ -6,113 +6,74 @@ CodeAide is a chat application that leverages LLMs to generate code based on use
 
 Follow these steps to build CodeAide as a standalone application for macOS:
 
-Prerequisites
+### Prerequisites
 
-- Python 3.7 or higher
-- pip (Python package installer)
+- Python 3.11 or higher
+- Conda (for managing the Python environment)
 - Homebrew (for installing create-dmg)
 
-### Step 1: Install Required Python Packages
+### Step 1: Set Up the Environment
 
-```
-pip install PyQt5 pyinstaller
-```
-
-### Step 2: Package the Application
-
-1. Navigate to your project directory:
-    ```
-    cd path/to/CodeAIde
-    ```
-
-2. Run PyInstaller:
-    ```
-    pyinstaller --windowed --onefile --add-data "codeaide/examples.yaml:codeaide" codeaide.py
-    ```
-    This command creates a single executable file in the `dist` folder.
-
-    Note: Make sure the path to examples.yaml is correct. If you're in the root of your project, it should be "codeaide/examples.yaml" as shown above.
-
-### Step 3: Create an Application Bundle
-
-1. Create the necessary directories:
-    ```
-    mkdir -p CodeAide.app/Contents/MacOS
-    mkdir -p CodeAide.app/Contents/Resources
-    ```
-
-2. Move your executable:
-    ```
-    mv dist/codeaide CodeAide.app/Contents/MacOS/CodeAide
-    ```
-
-3. Create an `Info.plist` file in `CodeAide.app/Contents/`:
-    ```
-    <?xml version="1.0" encoding="UTF-8"?>
-    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-    <plist version="1.0">
-    <dict>
-        <key>CFBundleExecutable</key>
-        <string>CodeAide</string>
-        <key>CFBundleIconFile</key>
-        <string>icon.icns</string>
-        <key>CFBundleIdentifier</key>
-        <string>com.yourcompany.codeaide</string>
-        <key>CFBundleName</key>
-        <string>CodeAide</string>
-        <key>CFBundlePackageType</key>
-        <string>APPL</string>
-        <key>CFBundleShortVersionString</key>
-        <string>1.0.0</string>
-    </dict>
-    </plist>
+1. Create and activate a new conda environment:
+   ```
+   conda create -n codeaide python=3.11
+   conda activate codeaide
    ```
 
-4. (Optional) Add an icon:
-   - Create a .icns file for your app icon
-   - Place it in `CodeAide.app/Contents/Resources/icon.icns`
+2. Ensure you're in the project root directory.
 
-### Step 4: Create the DMG
+### Step 2: Run the Build Script
 
-1. Install create-dmg:
-    ```
-    brew install create-dmg
-    ```
+1. Make the build script executable:
+   ```
+   chmod +x build_codeaide.sh
+   ```
 
-2. Create the DMG:
-    ```
-    create-dmg \
-        --volname "CodeAide Installer" \
-        --window-pos 200 120 \
-        --window-size 800 400 \
-        --icon-size 100 \
-        --icon "CodeAide.app" 200 190 \
-        --hide-extension "CodeAide.app" \
-        --app-drop-link 600 185 \
-        "CodeAide.dmg" \
-        "CodeAide.app"
-    ```
+2. Run the build script:
 
-### Step 5: Test The Application
+   For local testing (without notarization):
+   ```
+   ./build_codeaide.sh
+   ```
+
+   For building a distributable version (with notarization):
+   ```
+   ./build_codeaide.sh --notarize
+   ```
+
+   If you choose to notarize, you will be prompted to enter:
+   - Your Developer ID Application certificate name
+   - Your Apple Developer Team ID
+   - Your Apple ID
+   - Your app-specific password
+
+   Make sure you have these details ready before running the script with the --notarize option.
+
+### Step 3: Test The Application
 
 Always test the DMG on a clean macOS installation to ensure it works as expected.
 
-Troubleshooting
+## Troubleshooting
 
-If you encounter issues with resource files not being found:
+If you encounter issues:
 
-1. Ensure all necessary files (like `examples.yaml`) are included in the PyInstaller command with the correct path.
-2. Check the console output for any error messages.
-3. Verify that the paths in `general_utils.py` are correct for both development and packaged environments.
+1. Check the console output for any error messages.
+2. Ensure all necessary files are included in the `codeaide.spec` file.
+3. Verify that the paths in your code are correct for both development and packaged environments.
+4. If you're having issues with PyInstaller, try updating it to the latest version:
+   ```
+   pip install --upgrade pyinstaller
+   ```
 
-Updating the Application
+## Updating the Application
 
 When updating the application:
 
-1. Increment the version number in `Info.plist`.
-2. Rebuild the application following the steps above.
-3. Create a new DMG with the updated version.
+1. Update the version number in the `build_codeaide.sh` script (look for `CFBundleShortVersionString`).
+2. Rebuild the application by running the build script.
 
-Notes
+## Notes
 
-- This README assumes you're building on macOS. The process may differ for other operating systems.
+- This build process is designed for macOS. The process may differ for other operating systems.
+- Ensure you're in the correct conda environment (`codeaide`) when running these commands.
+- The `codeaide.spec` file is crucial for correct packaging. If you make changes to your project structure or dependencies, update the spec file accordingly.
