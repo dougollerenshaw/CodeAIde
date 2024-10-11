@@ -47,6 +47,7 @@ from scipy.io import wavfile
 import whisper
 import tempfile
 from codeaide.utils.general_utils import get_resource_path
+import os
 
 
 class AudioRecorder(QThread):
@@ -149,7 +150,9 @@ class ChatWindow(QMainWindow):
 
         # Initialize Whisper model
         print("Loading Whisper model...")
-        self.whisper_model = whisper.load_model("tiny")
+        model_path = get_resource_path("models/whisper")
+        os.makedirs(model_path, exist_ok=True)
+        self.whisper_model = whisper.load_model("tiny", download_root=model_path)
         print("Whisper model loaded.")
 
         # Check API key status
