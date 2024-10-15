@@ -21,6 +21,7 @@ from codeaide.utils.terminal_manager import TerminalManager
 from codeaide.utils.general_utils import generate_session_id
 from codeaide.utils.logging_config import get_logger, setup_logger
 from PyQt5.QtCore import QObject, pyqtSignal
+from codeaide.utils.environment_manager import EnvironmentManager
 
 
 class ChatHandler(QObject):
@@ -50,8 +51,10 @@ class ChatHandler(QObject):
         )  # Store the specific session directory
         self.logger = get_logger()
         self.conversation_history = self.file_handler.load_chat_history()
+        self.environment_manager = EnvironmentManager(self.session_id)
         self.terminal_manager = TerminalManager(
-            traceback_callback=self.emit_traceback_signal
+            environment_manager=self.environment_manager,
+            traceback_callback=self.emit_traceback_signal,
         )
         self.latest_version = "0.0"
         self.api_client = None
@@ -63,6 +66,7 @@ class ChatHandler(QObject):
         self.max_tokens = AI_PROVIDERS[self.current_provider]["models"][
             self.current_model
         ]["max_tokens"]
+        self.env_manager = EnvironmentManager(self.session_id)
 
         self.api_key_valid, self.api_key_message = self.check_api_key()
         self.logger.info(f"New session started with ID: {self.session_id}")
@@ -632,3 +636,6 @@ class ChatHandler(QObject):
         self.chat_window.input_text.setPlainText(message)
         self.logger.info("ChatHandler: Calling on_submit in chat window")
         self.chat_window.on_submit()
+
+    def cleanup(self):
+        self.env_manager.cleanup()

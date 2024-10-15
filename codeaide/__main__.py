@@ -1,5 +1,5 @@
 import sys
-
+import atexit
 from PyQt5.QtWidgets import QApplication
 
 from codeaide.logic.chat_handler import ChatHandler
@@ -8,6 +8,7 @@ from codeaide.utils import api_utils
 
 def main():
     chat_handler = ChatHandler()
+    atexit.register(chat_handler.cleanup)
 
     if len(sys.argv) > 1 and sys.argv[1] == "test":
         success, message = api_utils.check_api_connection()
