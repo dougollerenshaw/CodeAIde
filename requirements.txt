@@ -3,7 +3,7 @@ google-generativeai==0.8.3
 python-decouple==3.8
 virtualenv==20.16.2
 numpy==1.26.4
-numpy==1.26.4
+keyring
 openai
 hjson
 pyyaml
@@ -20,4 +20,3 @@ autoflake
 openai-whisper
 sounddevice
 scipy
-ffmpeg-python
