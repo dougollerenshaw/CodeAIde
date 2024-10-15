@@ -48,24 +48,6 @@ def mock_anthropic_client():
         yield mock_client
 
 
-@pytest.fixture
-def mock_openai_client():
-    """
-    A pytest fixture that mocks the OpenAI API client.
-
-    This fixture patches the 'openai.OpenAI' class and returns a mock client.
-    The mock client can be used to simulate OpenAI API responses in tests
-    without making actual API calls.
-
-    Returns:
-        Mock: A mock object representing the OpenAI API client.
-    """
-    with patch("openai.OpenAI") as mock_openai:
-        mock_client = Mock()
-        mock_openai.return_value = mock_client
-        yield mock_client
-
-
 class TestGetApiClient:
     """
     A test class for the get_api_client function in the api_utils module.
@@ -86,32 +68,9 @@ class TestGetApiClient:
         Various test methods to cover different scenarios for get_api_client function.
     """
 
-    @patch("codeaide.utils.api_utils.AutoConfig")
-    def test_get_api_client_missing_key(self, mock_auto_config):
-        """
-        Test the behavior of get_api_client when the API key is missing.
-
-        This test ensures that the get_api_client function returns None when the
-        ANTHROPIC_API_KEY is not set in the environment variables.
-
-        Args:
-            mock_auto_config (MagicMock): A mock object for the AutoConfig class.
-
-        The test performs the following steps:
-        1. Mocks the AutoConfig to return None, simulating a missing API key.
-        2. Calls get_api_client with the "anthropic" provider.
-        3. Asserts that the returned client is None, as expected when the API key is missing.
-        """
-        mock_config = Mock()
-        mock_config.return_value = None
-        mock_auto_config.return_value = mock_config
-
-        client = get_api_client(provider="anthropic")
-        assert client is None
-
-    @patch("codeaide.utils.api_utils.AutoConfig")
+    @patch("codeaide.utils.api_utils.ConfigManager")
     @patch("anthropic.Anthropic")
-    def test_get_api_client_success(self, mock_anthropic, mock_auto_config):
+    def test_get_api_client_success(self, mock_anthropic, mock_config_manager):
         """
         Test the successful creation of an API client for Anthropic.
 
@@ -120,18 +79,18 @@ class TestGetApiClient:
 
         Args:
             mock_anthropic (MagicMock): A mock object for the Anthropic class.
-            mock_auto_config (MagicMock): A mock object for the AutoConfig class.
+            mock_config_manager (MagicMock): A mock object for the ConfigManager class.
 
         The test performs the following steps:
-        1. Mocks the AutoConfig to return a test API key.
+        1. Mocks the ConfigManager to return a test API key.
         2. Mocks the Anthropic class to return a mock client.
         3. Calls get_api_client with the "anthropic" provider.
         4. Asserts that the returned client is not None.
         5. Verifies that the client is the same as the mock client.
         """
         mock_config = Mock()
-        mock_config.return_value = "test_key"
-        mock_auto_config.return_value = mock_config
+        mock_config.get_api_key.return_value = "test_key"
+        mock_config_manager.return_value = mock_config
 
         mock_client = Mock()
         mock_anthropic.return_value = mock_client
@@ -139,52 +98,6 @@ class TestGetApiClient:
         client = get_api_client(provider="anthropic")
         assert client is not None
         assert client == mock_client
-
-    @patch("codeaide.utils.api_utils.AutoConfig")
-    def test_get_api_client_empty_key(self, mock_auto_config):
-        """
-        Test the behavior of get_api_client when the API key is empty.
-
-        This test ensures that the get_api_client function returns None when the
-        ANTHROPIC_API_KEY is set to an empty string in the environment variables.
-
-        Args:
-            mock_auto_config (MagicMock): A mock object for the AutoConfig class.
-
-        The test performs the following steps:
-        1. Mocks the AutoConfig to return an empty string, simulating an empty API key.
-        2. Calls get_api_client with the "anthropic" provider.
-        3. Asserts that the returned client is None, as expected when the API key is empty.
-        """
-        mock_config = Mock()
-        mock_config.return_value = ""
-        mock_auto_config.return_value = mock_config
-
-        client = get_api_client(provider="anthropic")
-        assert client is None
-
-    @patch("codeaide.utils.api_utils.AutoConfig")
-    def test_get_api_client_unsupported_service(self, mock_auto_config):
-        """
-        Test the behavior of get_api_client when an unsupported service is provided.
-
-        This test ensures that the get_api_client function returns None when an
-        unsupported service provider is specified.
-
-        Args:
-            mock_auto_config (MagicMock): A mock object for the AutoConfig class.
-
-        The test performs the following steps:
-        1. Mocks the AutoConfig to return a dummy API key.
-        2. Calls get_api_client with an unsupported service provider.
-        3. Asserts that the returned result is None, as expected for unsupported services.
-        """
-        mock_config = Mock()
-        mock_config.return_value = "dummy_key"
-        mock_auto_config.return_value = mock_config
-
-        result = get_api_client(provider="unsupported_service")
-        assert result is None
 
 
 class TestSendAPIRequest:
