@@ -9,7 +9,6 @@ from codeaide.utils.api_utils import (
     check_api_connection,
     parse_response,
     send_api_request,
-    get_api_client,
 )
 from codeaide.utils.constants import (
     SYSTEM_PROMPT,
@@ -46,58 +45,6 @@ def mock_anthropic_client():
         mock_client.messages = mock_messages
         mock_anthropic.return_value = mock_client
         yield mock_client
-
-
-class TestGetApiClient:
-    """
-    A test class for the get_api_client function in the api_utils module.
-
-    This class contains test methods to verify the behavior of the get_api_client function
-    under various scenarios, such as missing API keys, successful client creation,
-    and handling of unsupported services.
-
-    The @patch decorators used in this class serve to mock the 'config' and 'AutoConfig'
-    functions from the codeaide.utils.api_utils module. This allows us to control the
-    behavior of these functions during testing, simulating different environments and
-    configurations without actually modifying the system or making real API calls.
-
-    Attributes:
-        None
-
-    Methods:
-        Various test methods to cover different scenarios for get_api_client function.
-    """
-
-    @patch("codeaide.utils.api_utils.ConfigManager")
-    @patch("anthropic.Anthropic")
-    def test_get_api_client_success(self, mock_anthropic, mock_config_manager):
-        """
-        Test the successful creation of an API client for Anthropic.
-
-        This test verifies that the get_api_client function correctly creates and returns
-        an Anthropic API client when a valid API key is provided in the environment.
-
-        Args:
-            mock_anthropic (MagicMock): A mock object for the Anthropic class.
-            mock_config_manager (MagicMock): A mock object for the ConfigManager class.
-
-        The test performs the following steps:
-        1. Mocks the ConfigManager to return a test API key.
-        2. Mocks the Anthropic class to return a mock client.
-        3. Calls get_api_client with the "anthropic" provider.
-        4. Asserts that the returned client is not None.
-        5. Verifies that the client is the same as the mock client.
-        """
-        mock_config = Mock()
-        mock_config.get_api_key.return_value = "test_key"
-        mock_config_manager.return_value = mock_config
-
-        mock_client = Mock()
-        mock_anthropic.return_value = mock_client
-
-        client = get_api_client(provider="anthropic")
-        assert client is not None
-        assert client == mock_client
 
 
 class TestSendAPIRequest:
