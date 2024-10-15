@@ -6,7 +6,6 @@ import threading
 import logging
 import queue
 import time
-from codeaide.utils.environment_manager import EnvironmentManager
 
 
 class ScriptRunner:
@@ -172,11 +171,15 @@ class ScriptRunner:
 
 
 class TerminalManager:
-    def __init__(self, traceback_callback=None):
+    def __init__(
+        self,
+        environment_manager,
+        traceback_callback=None,
+    ):
         self.runners = []
         self.logger = logging.getLogger(__name__)
         self.traceback_callback = traceback_callback
-        self.env_manager = EnvironmentManager()
+        self.env_manager = environment_manager
         atexit.register(self.cleanup)
 
     def run_script(self, script_path, requirements_path):
@@ -203,11 +206,13 @@ class TerminalManager:
 
     def _create_script_content(self, script_path, activation_command, new_packages):
         script_name = os.path.basename(script_path)
+        current_env_name = self.env_manager.get_current_env_name()
         python_executable = self.env_manager.get_python_executable()
+        currently_installed_packages = self.env_manager.get_installed_packages()
 
         script_content = f"""
-        clear # Clear the terminal
-        echo "Activating environment..."
+        clear
+        echo "Activating environment {current_env_name}..."
         {activation_command}
         """
 
@@ -215,6 +220,10 @@ class TerminalManager:
             script_content += 'echo "New dependencies installed:"\n'
             for package in new_packages:
                 script_content += f'echo "  - {package}"\n'
+
+        script_content += 'echo "All installed packages:"\n'
+        for package in currently_installed_packages:
+            script_content += f'echo "  - {package}"\n'
 
         script_content += f"""
         echo "Running {script_name}..."

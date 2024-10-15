@@ -8,14 +8,13 @@ logger = get_logger()
 
 
 class EnvironmentManager:
-    def __init__(self, env_name="codeaide_env"):
-        self.env_name = env_name
+    def __init__(self, session_id):
+        self.env_name = f"codeaide_env_{session_id}"
         self.env_path = os.path.join(
             os.path.expanduser("~"), ".codeaide_envs", self.env_name
         )
         self.installed_packages = set()
         self._setup_environment()
-        self._get_installed_packages()
 
     def _setup_environment(self):
         if not os.path.exists(self.env_path):
@@ -24,7 +23,10 @@ class EnvironmentManager:
         else:
             logger.info(f"Using existing virtual environment at {self.env_path}")
 
-    def _get_installed_packages(self):
+    def get_current_env_name(self):
+        return self.env_name
+
+    def get_installed_packages(self):
         pip_path = (
             os.path.join(self.env_path, "bin", "pip")
             if os.name != "nt"
@@ -38,18 +40,21 @@ class EnvironmentManager:
                 capture_output=True,
                 text=True,
             )
-            self.installed_packages = {
+            installed_packages = {
                 pkg.split("==")[0].lower() for pkg in result.stdout.split("\n") if pkg
             }
             logger.info(f"Found {len(self.installed_packages)} installed packages")
         except subprocess.CalledProcessError as e:
             logger.error(f"Error getting installed packages: {e}")
 
+        return installed_packages
+
     def install_requirements(self, requirements_file):
         with open(requirements_file, "r") as f:
             required_packages = {line.strip().lower() for line in f if line.strip()}
 
-        packages_to_install = required_packages - self.installed_packages
+        installed_packages = self.get_installed_packages()
+        packages_to_install = required_packages - installed_packages
 
         if packages_to_install:
             packages_str = " ".join(packages_to_install)
@@ -94,9 +99,7 @@ class EnvironmentManager:
         else:  # Unix-like
             return os.path.join(self.env_path, "bin", "python")
 
-    def recreate_environment(self):
-        logger.info(f"Recreating virtual environment at {self.env_path}")
+    def cleanup(self):
+        logger.info(f"Cleaning up virtual environment at {self.env_path}")
         if os.path.exists(self.env_path):
             shutil.rmtree(self.env_path)
-        self._setup_environment()
-        self._get_installed_packages()
