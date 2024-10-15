@@ -1,8 +1,6 @@
-import os
 import anthropic
 import openai
 import google.generativeai as genai
-from decouple import AutoConfig
 import hjson
 import re
 from google.generativeai.types import GenerationConfig
@@ -14,8 +12,10 @@ from codeaide.utils.constants import (
     SYSTEM_PROMPT,
 )
 from codeaide.utils.logging_config import get_logger
+from codeaide.utils.config_manager import ConfigManager
 
 logger = get_logger()
+config_manager = ConfigManager()
 
 
 class MissingAPIKeyException(Exception):
@@ -28,18 +28,8 @@ class MissingAPIKeyException(Exception):
 
 def get_api_client(provider=DEFAULT_PROVIDER, model=None):
     try:
-        root_dir = os.path.dirname(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        )
-
-        # Use AutoConfig to automatically find and load the .env file in the project root
-        config = AutoConfig(search_path=root_dir)
-
-        api_key_name = AI_PROVIDERS[provider]["api_key_name"]
-        api_key = config(api_key_name, default=None)
-        logger.info(
-            f"Attempting to get API key for {provider} with key name: {api_key_name}"
-        )
+        api_key = config_manager.get_api_key(provider)
+        logger.info(f"Attempting to get API key for {provider}")
         logger.info(f"API key found: {'Yes' if api_key else 'No'}")
 
         if api_key is None or api_key.strip() == "":
@@ -64,30 +54,7 @@ def get_api_client(provider=DEFAULT_PROVIDER, model=None):
 def save_api_key(service, api_key):
     try:
         cleaned_key = api_key.strip().strip("'\"")  # Remove quotes and whitespace
-        root_dir = os.path.dirname(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        )
-        env_path = os.path.join(root_dir, ".env")
-
-        if os.path.exists(env_path):
-            with open(env_path, "r") as file:
-                lines = file.readlines()
-
-            key_exists = False
-            for i, line in enumerate(lines):
-                if line.startswith(f"{service.upper()}_API_KEY="):
-                    lines[i] = f'{service.upper()}_API_KEY="{cleaned_key}"\n'
-                    key_exists = True
-                    break
-
-            if not key_exists:
-                lines.append(f'{service.upper()}_API_KEY="{cleaned_key}"\n')
-        else:
-            lines = [f'{service.upper()}_API_KEY="{cleaned_key}"\n']
-
-        with open(env_path, "w") as file:
-            file.writelines(lines)
-
+        config_manager.set_api_key(service, cleaned_key)
         return True
     except Exception as e:
         logger.error(f"Error saving API key: {str(e)}")

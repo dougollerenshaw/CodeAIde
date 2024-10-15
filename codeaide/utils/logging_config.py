@@ -1,14 +1,19 @@
 import logging
 from logging.handlers import RotatingFileHandler
 import os
+import sys
 
 
 def setup_logger(session_dir, level=logging.INFO):
-    log_dir = os.path.join(session_dir)
-    os.makedirs(log_dir, exist_ok=True)
-
-    # Set up the log file path
-    log_file = os.path.join(log_dir, "codeaide.log")
+    if getattr(sys, "frozen", False):
+        # We are running in a bundle
+        log_dir = os.path.expanduser("~/Library/Application Support/CodeAide")
+        os.makedirs(log_dir, exist_ok=True)
+        log_file = os.path.join(log_dir, f"codeaide_{os.getpid()}.log")
+    else:
+        # We are running in a normal Python environment
+        log_dir = session_dir
+        log_file = os.path.join(log_dir, "codeaide.log")
 
     # Create a formatter
     formatter = logging.Formatter(

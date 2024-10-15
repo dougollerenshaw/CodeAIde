@@ -21,6 +21,7 @@ from codeaide.utils.terminal_manager import TerminalManager
 from codeaide.utils.general_utils import generate_session_id
 from codeaide.utils.logging_config import get_logger, setup_logger
 from PyQt5.QtCore import QObject, pyqtSignal
+from codeaide.ui.chat_window import ChatWindow
 
 
 class ChatHandler(QObject):
@@ -69,14 +70,9 @@ class ChatHandler(QObject):
         self.logger.info(f"Session directory: {self.session_dir}")
         self.chat_window = None
 
-    def start_application(self):
-        from codeaide.ui.chat_window import (
-            ChatWindow,
-        )  # Import here to avoid circular imports
-
+    def create_chat_window(self):
         self.chat_window = ChatWindow(self)
-        self.connect_signals()
-        self.chat_window.show()
+        return self.chat_window
 
     def connect_signals(self):
         self.update_chat_signal.connect(self.chat_window.add_to_chat)

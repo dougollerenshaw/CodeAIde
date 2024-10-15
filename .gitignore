@@ -28,17 +28,17 @@ CodeAide.app/
 # Ignore CodeAide.dmg file
 CodeAide.dmg
 
-# Ignore build directory
+# Build artifacts
 build/
-
-# Ignore codeaide.spec file
-codeaide.spec
-
-# Ignore dist directory
 dist/
+*.spec
+!build_scripts/codeaide.spec
 
 # Ignore .dmg files
 *.dmg
 
 # Ignore .egg-info directories
 *.egg-info/
+
+# Ignore the models folder
+models/
