@@ -2,7 +2,7 @@ import os
 import platform
 import sys
 from pathlib import Path
-from decouple import Config, RepositoryEnv
+from decouple import Config, RepositoryEnv, UndefinedValueError
 
 
 class ConfigManager:
@@ -14,6 +14,7 @@ class ConfigManager:
         else:
             self.config_dir = Path(__file__).parent.parent.parent
             self.env_file = self.config_dir / ".env"
+            self._ensure_env_file()
 
     def _get_app_config_dir(self):
         system = platform.system()
@@ -24,6 +25,10 @@ class ConfigManager:
         else:  # Linux and others
             return Path.home() / ".config" / "codeaide"
 
+    def _ensure_env_file(self):
+        if not self.env_file.exists():
+            self.env_file.touch()
+
     def get_api_key(self, provider):
         if self.is_packaged_app:
             import keyring
@@ -32,8 +37,11 @@ class ConfigManager:
                 self.keyring_service, f"{provider.upper()}_API_KEY"
             )
         else:
-            config = Config(RepositoryEnv(self.env_file))
-            return config(f"{provider.upper()}_API_KEY", default=None)
+            try:
+                config = Config(RepositoryEnv(self.env_file))
+                return config(f"{provider.upper()}_API_KEY")
+            except UndefinedValueError:
+                return None
 
     def set_api_key(self, provider, api_key):
         if self.is_packaged_app:
