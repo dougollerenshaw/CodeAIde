@@ -148,9 +148,7 @@ class ScriptRunner:
     def show_traceback_if_any(self):
         if self.traceback_buffer:
             traceback_text = "\n".join(self.traceback_buffer)
-            self.logger.info(
-                f"ScriptRunner: Traceback detected: {traceback_text[:50]}..."
-            )
+            self.logger.info(f"ScriptRunner: Traceback detected: {traceback_text}...")
             if self.traceback_callback:
                 self.logger.info("ScriptRunner: Calling traceback callback")
                 self.traceback_callback(traceback_text)
@@ -207,7 +205,7 @@ class TerminalManager:
 
         script_content = f"""
         clear # Clear the terminal
-        echo "Activating environment..."
+        echo "Activating environment with {activation_command}"
         {activation_command}
         """
 

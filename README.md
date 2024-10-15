@@ -27,6 +27,7 @@ https://github.com/user-attachments/assets/8aa729ff-c431-4a61-a9ef-d17050a27d02
 ### Prerequisites
 
 - Python 3.9 or higher
+- Conda (Miniconda or Anaconda)
 
 ### Setup
 
@@ -47,14 +48,28 @@ https://github.com/user-attachments/assets/8aa729ff-c431-4a61-a9ef-d17050a27d02
    pip install -r requirements.txt
    ```
 
-4. Set up your Anthropic API key:
-   - Set up a developer account with Anthropic and get an API key at https://console.anthropic.com/dashboard
-   - You'll need to pre-fund your account to cover API costs. Current costs (as of Sept 15, 2024) are $0.003 and $0.015 per 1000 tokens for input and output, respectively. Long conversations will obviously cost more. Fund your account with something small (maybe $5) to start with, then add more if you find this tool useful.
-   - Create a `.env` file in the project root
-   - Add your API key to the file:
-     ```
-     ANTHROPIC_API_KEY="your_api_key_here"  # make sure the key is in quotes
-     ```
+Note: These instructions should work for most systems (macOS, including Apple Silicon, Windows, and Linux). If you encounter any architecture-specific issues, please refer to the troubleshooting section below or open an issue on GitHub.
+
+### Troubleshooting
+
+If you experience architecture-specific issues (e.g., on Apple Silicon Macs), try the following:
+
+1. Ensure Conda is using the correct architecture:
+   ```
+   conda info
+   ```
+   Look for the "platform" field to confirm it matches your system architecture.
+
+2. If needed, you can force Conda to use a specific architecture:
+   ```
+   CONDA_SUBDIR=osx-arm64 conda create -n codeaide python=3.11  # For Apple Silicon
+   conda activate codeaide
+   conda config --env --set subdir osx-arm64  # For Apple Silicon
+   ```
+
+3. Then proceed with step 3 of the regular installation process.
+
+For other architecture-specific issues, please open an issue on GitHub with details about your system and the problem you're encountering.
 
 ## Usage
 

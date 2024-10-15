@@ -20,3 +20,4 @@ autoflake
 openai-whisper
 sounddevice
 scipy
+PyInstaller

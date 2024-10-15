@@ -46,13 +46,23 @@ import time
 import sounddevice as sd
 import numpy as np
 from scipy.io import wavfile
-import whisper
 import tempfile
 from codeaide.utils.general_utils import get_resource_path
 import os
 import traceback
 import subprocess
 from codeaide.utils.general_utils import get_most_recent_log_file
+import logging
+
+try:
+    import whisper
+
+    WHISPER_AVAILABLE = True
+except ImportError:
+    WHISPER_AVAILABLE = False
+    print(
+        "Whisper module not available. Speech-to-text functionality will be disabled."
+    )
 
 
 class AudioRecorder(QThread):
@@ -728,27 +738,43 @@ class ChatWindow(QMainWindow):
             f"Total time from recording stop to transcription complete: {transcription_end - transcription_start:.2f} seconds"
         )
 
-    def transcribe_audio(self, filename):
-        self.logger.info("Transcribing audio")
-        progress_dialog = QProgressDialog("Transcribing audio...", None, 0, 0, self)
-        progress_dialog.setWindowTitle("Please Wait")
-        progress_dialog.setWindowModality(Qt.WindowModal)
-        progress_dialog.setAutoClose(True)
-        progress_dialog.setAutoReset(True)
-        progress_dialog.setMinimumDuration(0)
-        progress_dialog.setValue(0)
-        progress_dialog.setMaximum(0)  # This makes it an indeterminate progress dialog
-        progress_dialog.show()
+    def transcribe_audio(self, audio_file):
+        try:
+            logging.info(f"Whisper package location: {whisper.__file__}")
+            logging.info(f"Current working directory: {os.getcwd()}")
+            logging.info(f"Python path: {sys.path}")
+            logging.info(f"Contents of current directory: {os.listdir('.')}")
+            whisper_dir = os.path.dirname(whisper.__file__)
+            logging.info(f"Contents of whisper directory: {os.listdir(whisper_dir)}")
+            logging.info(
+                f"Contents of whisper assets directory: {os.listdir(os.path.join(whisper_dir, 'assets'))}"
+            )
 
-        self.transcription_thread = TranscriptionThread(
-            self.whisper_model, filename, self.logger
-        )
-        self.transcription_thread.finished.connect(self.on_transcription_finished)
-        self.transcription_thread.error.connect(self.on_transcription_error)
-        self.transcription_thread.finished.connect(progress_dialog.close)
-        self.transcription_thread.error.connect(progress_dialog.close)
-        self.transcription_thread.start()
-        self.logger.info("Transcription thread started")
+            self.logger.info("Transcribing audio")
+            progress_dialog = QProgressDialog("Transcribing audio...", None, 0, 0, self)
+            progress_dialog.setWindowTitle("Please Wait")
+            progress_dialog.setWindowModality(Qt.WindowModal)
+            progress_dialog.setAutoClose(True)
+            progress_dialog.setAutoReset(True)
+            progress_dialog.setMinimumDuration(0)
+            progress_dialog.setValue(0)
+            progress_dialog.setMaximum(
+                0
+            )  # This makes it an indeterminate progress dialog
+            progress_dialog.show()
+
+            self.transcription_thread = TranscriptionThread(
+                self.whisper_model, audio_file, self.logger
+            )
+            self.transcription_thread.finished.connect(self.on_transcription_finished)
+            self.transcription_thread.error.connect(self.on_transcription_error)
+            self.transcription_thread.finished.connect(progress_dialog.close)
+            self.transcription_thread.error.connect(progress_dialog.close)
+            self.transcription_thread.start()
+            self.logger.info("Transcription thread started")
+        except Exception as e:
+            self.logger.error(f"Error in transcription: {str(e)}")
+            self.logger.error(traceback.format_exc())
 
     def on_transcription_finished(self, transcribed_text):
         self.logger.info("on_transcription_finished method called")
@@ -803,6 +829,10 @@ class ChatWindow(QMainWindow):
         scrollbar.setValue(scrollbar.maximum())
 
     def load_whisper_model(self):
+        if not WHISPER_AVAILABLE:
+            self.logger.warning("Whisper is not available. Speech-to-text is disabled.")
+            return
+
         try:
             self.logger.info("Loading Whisper model...")
             model_path = get_resource_path("models/whisper")

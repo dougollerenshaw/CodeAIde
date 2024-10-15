@@ -3,29 +3,7 @@
 # Exit on any error
 set -e
 
-# Function to check if a command exists
-command_exists () {
-    type "$1" &> /dev/null ;
-}
-
-# Check prerequisites
-if ! command_exists conda ; then
-    echo "conda is not installed. Please install it and try again."
-    exit 1
-fi
-
-if ! command_exists brew ; then
-    echo "Homebrew is not installed. Please install it and try again."
-    exit 1
-fi
-
-# Check if notarization is requested
-NOTARIZE=false
-if [ "$1" = "--notarize" ]; then
-    NOTARIZE=true
-fi
-
-# Activate conda environment
+# Activate the correct conda environment
 eval "$(conda shell.bash hook)"
 conda activate codeaide
 
@@ -43,50 +21,32 @@ mkdir -p ~/Library/Logs/CodeAide
 echo "Ensuring application data directory exists..."
 mkdir -p ~/Library/Application\ Support/CodeAide
 
-# Step 1: Install Required Python Packages and Download Whisper Model
+# Install required packages
 echo "Installing required Python packages..."
 $PYTHON_PATH -m pip install --upgrade pip
-$PYTHON_PATH -m pip install PyQt5 pyinstaller whisper
+$PYTHON_PATH -m pip install -r requirements.txt
 
-echo "Downloading Whisper model..."
-$PYTHON_PATH <<EOF
-import whisper
-whisper.load_model('tiny', download_root='./codeaide/models/whisper')
-EOF
+# Check if Whisper is installed
+echo "Checking Whisper installation..."
+$PYTHON_PATH -c "import whisper; print('Whisper version:', whisper.__version__)"
 
-# Step 2: Package the Application
+# Package the application
 echo "Packaging the application..."
-$PYTHON_PATH -m PyInstaller build_scripts/codeaide.spec
+yes | $PYTHON_PATH -m PyInstaller build_scripts/codeaide.spec
 
-# Step 3: Create the DMG
+# Create the DMG
 echo "Creating DMG..."
 APP_NAME="CodeAide"
 DMG_NAME="${APP_NAME}.dmg"
 SOURCE_DIR="dist/${APP_NAME}.app"
-TEMP_DMG="temp_${DMG_NAME}"
 FINAL_DMG="${DMG_NAME}"
-
-# Clean up function
-cleanup() {
-    echo "Cleaning up..."
-    for disk in $(diskutil list | grep ${APP_NAME} | awk '{print $NF}'); do
-        echo "Attempting to unmount and eject $disk"
-        diskutil unmountDisk force $disk 2>/dev/null || true
-        diskutil eject force $disk 2>/dev/null || true
-    done
-    rm -f "${TEMP_DMG}"
-}
-
-# Run cleanup before starting
-cleanup
 
 # Create a temporary directory for DMG contents
 TEMP_DIR=$(mktemp -d)
 cp -R "${SOURCE_DIR}" "${TEMP_DIR}"
 ln -s /Applications "${TEMP_DIR}"
 
-# Create the DMG directly
-echo "Creating DMG..."
+# Create the DMG
 hdiutil create -volname "${APP_NAME}" -srcfolder "${TEMP_DIR}" -ov -format UDZO "${FINAL_DMG}"
 
 # Clean up the temporary directory
@@ -100,32 +60,5 @@ else
     exit 1
 fi
 
-if [ "$NOTARIZE" = true ]; then
-    # Prompt for Apple Developer information
-    read -p "Enter your Developer ID Application certificate name (e.g., 'Developer ID Application: Your Name'): " DEVELOPER_NAME
-    read -p "Enter your Apple Developer Team ID: " TEAM_ID
-    read -p "Enter your Apple ID: " APPLE_ID
-    read -s -p "Enter your app-specific password: " APP_PASSWORD
-    echo
-
-    # Step 4: Code Sign the Application
-    echo "Code signing the application..."
-    codesign --force --options runtime --entitlements build_scripts/entitlements.plist --sign "$DEVELOPER_NAME" "dist/CodeAide.app"
-
-    # Step 5: Notarize the DMG
-    echo "Notarizing the DMG..."
-    xcrun notarytool submit "${FINAL_DMG}" --wait --apple-id "$APPLE_ID" --password "$APP_PASSWORD" --team-id "$TEAM_ID"
-
-    # Step 6: Staple the notarization ticket to the DMG
-    echo "Stapling the notarization ticket..."
-    xcrun stapler staple "${FINAL_DMG}"
-
-    echo "Build process completed successfully!"
-    echo "The signed and notarized DMG is ready for distribution."
-else
-    echo "Build process completed successfully!"
-    echo "The DMG is ready for testing. (Not signed or notarized)"
-fi
-
-# Final cleanup
-cleanup
+echo "Build process completed successfully!"
+echo "The DMG is ready for testing. (Not signed or notarized)"
