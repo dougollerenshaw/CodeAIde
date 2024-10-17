@@ -20,8 +20,6 @@ Here are some example videos demonstrating use. Example prompts can be accessed 
 
 First, a simple matplotlib plot with followup requests to modify aesthetics.
 
-https://github.com/user-attachments/assets/8aa729ff-c431-4a61-a9ef-d17050a27d02
-
 ## Installation
 
 ### Prerequisites
