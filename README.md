@@ -47,14 +47,11 @@ https://github.com/user-attachments/assets/8aa729ff-c431-4a61-a9ef-d17050a27d02
    pip install -r requirements.txt
    ```
 
-4. Set up your Anthropic API key:
-   - Set up a developer account with Anthropic and get an API key at https://console.anthropic.com/dashboard
-   - You'll need to pre-fund your account to cover API costs. Current costs (as of Sept 15, 2024) are $0.003 and $0.015 per 1000 tokens for input and output, respectively. Long conversations will obviously cost more. Fund your account with something small (maybe $5) to start with, then add more if you find this tool useful.
-   - Create a `.env` file in the project root
-   - Add your API key to the file:
-     ```
-     ANTHROPIC_API_KEY="your_api_key_here"  # make sure the key is in quotes
-     ```
+4. Set up your API key:
+
+   You'll need an API key for Google, OpenAI, and/or Anthropic to use this tool. Google keys are free and allow limited access to the Gemini models. A free acount gives plenty of access for simple tasks. Unrestricted access requires a paid account. OpenAI and Anthropic do not offer free tiers. Each request to the API will result in a charge against your account. Individual requests are small (on the order of a couple of cents), but long conversations can get expensive.
+
+   When you first run the application and attempt to interact with a given API, you'll be prompted to enter your API key and be provided with instructions for how to obtain one if you don't already have an API key.◊
 
 ## Usage
 
@@ -74,17 +71,6 @@ Follow the prompts to interact with the AI assistant. You can:
 - Select and re-run any previous version of the code form the current conversation.
 
 
-To test the API connection, run:
-
-```
-python codeaide.py test
-```
-This will send a simple "Hi Claude, are we communicating?" prompt to the API. If your API key is set up properly and you have an internet connection, you'll see a response at the command line that looks something like this:
-```
-Connection successful!
-Claude says: Yes, we are communicating! I'm Claude, an AI assistant. How can I help you today?
-```
-
 ## Future feature roadmap
 
 The following features do not currently exist, but adding them in the future would make this project more useful:
@@ -96,10 +82,6 @@ The following features do not currently exist, but adding them in the future wou
 ## Contributing
 
 Contributions to CodeAIde are welcome! Please feel free to submit a Pull Request.
-
-## Building a standalone application
-
-For detailed instructions on how to build CodeAide as a standalone application, please refer to the [BUILD.md](BUILD.md) file in the root of this repository.
 
 ## License
 
