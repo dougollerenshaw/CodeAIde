@@ -167,6 +167,7 @@ class ChatWindow(QMainWindow):
         self.timer.timeout.connect(lambda: None)
 
         self.logger.info("Chat window initialized")
+        self.chat_handler.session_updated.connect(self.update_session_dropdown)
 
     def setup_ui(self):
         central_widget = QWidget(self)
@@ -175,13 +176,13 @@ class ChatWindow(QMainWindow):
         main_layout.setSpacing(5)
         main_layout.setContentsMargins(8, 8, 8, 8)
 
-        # Create a widget for the dropdowns
+        # Create a widget for the dropdowns (keep this as is)
         dropdown_widget = QWidget()
         dropdown_layout = QHBoxLayout(dropdown_widget)
         dropdown_layout.setContentsMargins(0, 0, 0, 0)
         dropdown_layout.setSpacing(5)
 
-        # Provider dropdown
+        # Provider dropdown (keep this as is)
         self.provider_dropdown = QComboBox()
         self.provider_dropdown.addItems(AI_PROVIDERS.keys())
         self.provider_dropdown.setCurrentText(DEFAULT_PROVIDER)
@@ -189,18 +190,36 @@ class ChatWindow(QMainWindow):
         dropdown_layout.addWidget(QLabel("Provider:"))
         dropdown_layout.addWidget(self.provider_dropdown)
 
-        # Model dropdown
+        # Model dropdown (keep this as is)
         self.model_dropdown = QComboBox()
         self.update_model_dropdown(DEFAULT_PROVIDER, add_message_to_chat=False)
         self.model_dropdown.currentTextChanged.connect(self.update_chat_handler)
         dropdown_layout.addWidget(QLabel("Model:"))
         dropdown_layout.addWidget(self.model_dropdown)
 
-        # Add stretch to push everything to the left
+        # Add stretch to push everything to the left (keep this as is)
         dropdown_layout.addStretch(1)
 
-        # Add the dropdown widget to the main layout
+        # Add the dropdown widget to the main layout (keep this as is)
         main_layout.addWidget(dropdown_widget)
+
+        # Create a new widget for the session selector
+        session_widget = QWidget()
+        session_layout = QHBoxLayout(session_widget)
+        session_layout.setContentsMargins(0, 0, 0, 0)
+        session_layout.setSpacing(5)
+
+        # Session selector dropdown
+        self.session_dropdown = QComboBox()
+        session_layout.addWidget(QLabel("Session Selector:"))
+        session_layout.addWidget(self.session_dropdown)
+        session_layout.addStretch(1)  # Add stretch to keep alignment consistent
+
+        # Add the session widget to the main layout
+        main_layout.addWidget(session_widget)
+
+        # Now that self.session_dropdown is initialized, we can update it
+        self.update_session_dropdown()
 
         # Chat display
         self.chat_display = QTextEdit(self)
@@ -532,7 +551,7 @@ class ChatWindow(QMainWindow):
 
         if reply == QMessageBox.Yes:
             self.logger.info("User confirmed starting a new session")
-            self.chat_handler.start_new_session(self)
+            self.chat_handler.start_new_session(self, initial_session=False)
         else:
             self.logger.info("User cancelled starting a new session")
 
@@ -750,3 +769,85 @@ class ChatWindow(QMainWindow):
         # Scroll to the bottom
         scrollbar = self.input_text.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
+
+    def update_session_dropdown(self):
+        self.session_dropdown.blockSignals(True)
+        self.session_dropdown.clear()
+        sessions = self.chat_handler.get_all_sessions()
+        current_session_id = self.chat_handler.session_id
+
+        # Always add the current session at the top
+        current_session = next(
+            (s for s in sessions if s["id"] == current_session_id), None
+        )
+        if current_session:
+            self.session_dropdown.addItem(
+                f"{current_session_id} (Current) - {current_session['summary']}",
+                current_session_id,
+            )
+        else:
+            # If the current session is not in the list (e.g., it's new and empty), add it manually
+            current_summary = (
+                self.chat_handler.session_manager.get_session_summary(
+                    current_session_id
+                )
+                or "New session"
+            )
+            self.session_dropdown.addItem(
+                f"{current_session_id} (Current) - {current_summary}",
+                current_session_id,
+            )
+
+        # Add other non-empty sessions
+        for session in sessions:
+            if session["id"] != current_session_id:
+                self.session_dropdown.addItem(
+                    f"{session['id']} - {session['summary']}", session["id"]
+                )
+
+        self.session_dropdown.setCurrentIndex(0)
+        self.session_dropdown.blockSignals(False)
+
+        # Reconnect the signal
+        self.session_dropdown.currentIndexChanged.connect(self.on_session_selected)
+
+    def on_session_selected(self, index):
+        if index == 0:  # Current session
+            return
+
+        selected_session_id = self.session_dropdown.itemData(index)
+        if selected_session_id is None:
+            self.logger.error(f"Invalid session selected at index {index}")
+            self.session_dropdown.setCurrentIndex(0)
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "Load Previous Session",
+            f"This will create a new session based on session {selected_session_id}. Are you sure you'd like to proceed?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+
+        if reply == QMessageBox.Yes:
+            self.logger.info(
+                f"User confirmed loading previous session: {selected_session_id}"
+            )
+            try:
+                self.update_session_dropdown()
+                # Disconnect and reconnect the signal to prevent multiple calls
+                self.session_dropdown.currentIndexChanged.disconnect()
+                self.session_dropdown.setCurrentIndex(0)
+                self.session_dropdown.currentIndexChanged.connect(
+                    self.on_session_selected
+                )
+            except Exception as e:
+                self.logger.error(f"Error loading previous session: {str(e)}")
+                QMessageBox.critical(
+                    self, "Error", f"Failed to load previous session: {str(e)}"
+                )
+                self.session_dropdown.setCurrentIndex(0)
+        else:
+            self.logger.info("User cancelled loading previous session")
+            # Reset the dropdown to the current session
+            self.session_dropdown.setCurrentIndex(0)

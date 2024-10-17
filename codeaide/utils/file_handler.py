@@ -2,14 +2,13 @@ import os
 import shutil
 import json
 from codeaide.utils.logging_config import setup_logger, get_logger
+from codeaide.utils.general_utils import get_project_root
 
 
 class FileHandler:
     def __init__(self, base_dir=None, session_id=None):
         if base_dir is None:
-            self.base_dir = os.path.dirname(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            )
+            self.base_dir = get_project_root
         else:
             self.base_dir = base_dir
         self.output_dir = os.path.join(self.base_dir, "session_data")
@@ -110,15 +109,31 @@ class FileHandler:
         except Exception as e:
             self.logger.error(f"Error saving chat history: {str(e)}")
 
-    def load_chat_history(self):
-        if not self.session_dir or not os.path.exists(self.chat_history_file):
+    def load_chat_history(self, session_id=None):
+        """
+        Load the chat history for a given session.
+        If no session_id is provided, it loads the current session's history.
+        """
+        if session_id is None:
+            session_id = self.session_id
+
+        if not session_id:
+            return []
+
+        chat_history_file = os.path.join(
+            self.output_dir, session_id, "chat_history.json"
+        )
+
+        if not os.path.exists(chat_history_file):
             return []
 
         try:
-            with open(self.chat_history_file, "r", encoding="utf-8") as f:
+            with open(chat_history_file, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
-            self.logger.error(f"Error loading chat history: {str(e)}")
+            self.logger.error(
+                f"Error loading chat history for session {session_id}: {str(e)}"
+            )
             return []
 
     def save_chat_contents(self, chat_contents):
@@ -133,22 +148,48 @@ class FileHandler:
         except Exception as e:
             self.logger.error(f"Error saving chat contents: {str(e)}")
 
-    def load_chat_contents(self):
-        if not os.path.exists(self.chat_window_log_file):
-            self.logger.info(f"No chat log file found at {self.chat_window_log_file}")
+    def load_chat_contents(self, session_id=None):
+        """
+        Load the chat contents for a given session.
+        If no session_id is provided, it loads the current session's contents.
+        """
+        if session_id is None:
+            session_id = self.session_id
+
+        if not session_id:
+            return []
+
+        chat_window_log_file = os.path.join(
+            self.output_dir, session_id, "chat_window_log.json"
+        )
+
+        if not os.path.exists(chat_window_log_file):
             return []
 
         try:
-            with open(self.chat_window_log_file, "r", encoding="utf-8") as f:
-                return json.load(f)
+            with open(chat_window_log_file, "r", encoding="utf-8") as f:
+                contents = json.load(f)
+
+            # Ensure each item has 'role' and 'content' keys
+            for item in contents:
+                if "sender" in item and "message" in item:
+                    item["role"] = item.pop("sender")
+                    item["content"] = item.pop("message")
+
+            return contents
         except Exception as e:
-            self.logger.error(f"Error loading chat contents: {str(e)}")
+            self.logger.error(
+                f"Error loading chat contents for session {session_id}: {str(e)}"
+            )
             return []
 
     def set_session_id(self, session_id):
         self.session_id = session_id
         self.session_dir = os.path.join(self.output_dir, self.session_id)
         self.chat_history_file = os.path.join(self.session_dir, "chat_history.json")
+        self.chat_window_log_file = os.path.join(
+            self.session_dir, "chat_window_log.json"
+        )
         self._ensure_output_dirs_exist()
         setup_logger(self.session_dir)
         self.logger = get_logger()
