@@ -140,17 +140,17 @@ class ChatWindow(QMainWindow):
         self.is_recording = False
 
         # Load microphone icons
-        self.green_mic_icon = QIcon(get_resource_path("assets/green_mic.png"))
-        self.red_mic_icon = QIcon(get_resource_path("assets/red_mic.png"))
+        self.green_mic_icon = QIcon(get_resource_path("codeaide/assets/green_mic.png"))
+        self.red_mic_icon = QIcon(get_resource_path("codeaide/assets/red_mic.png"))
 
         self.setup_ui()
         self.setup_input_placeholder()
         self.update_submit_button_state()
 
         # Initialize Whisper model
-        print("Loading Whisper model...")
+        self.logger.info("Loading Whisper model...")
         self.whisper_model = whisper.load_model("tiny")
-        print("Whisper model loaded.")
+        self.logger.info("Whisper model loaded.")
 
         # Check API key status
         if not self.chat_handler.api_key_valid:
