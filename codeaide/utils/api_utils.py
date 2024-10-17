@@ -165,12 +165,21 @@ def parse_response(response, provider):
     version_description = outer_json.get("version_description")
     requirements = outer_json.get("requirements", [])
     questions = outer_json.get("questions", [])
+    session_summary = outer_json.get("session_summary", "")
 
     # Clean the code if it exists
     if code:
         code = clean_code(code)
 
-    return text, questions, code, code_version, version_description, requirements
+    return (
+        text,
+        questions,
+        code,
+        code_version,
+        version_description,
+        requirements,
+        session_summary,
+    )
 
 
 def clean_code(code):

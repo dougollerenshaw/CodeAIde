@@ -18,10 +18,11 @@ from codeaide.utils.constants import (
 from codeaide.utils.cost_tracker import CostTracker
 from codeaide.utils.file_handler import FileHandler
 from codeaide.utils.terminal_manager import TerminalManager
-from codeaide.utils.general_utils import generate_session_id
-from codeaide.utils.logging_config import get_logger, setup_logger
+from codeaide.utils.general_utils import get_project_root
+from codeaide.utils.logging_config import get_logger
 from PyQt5.QtCore import QObject, pyqtSignal
 from codeaide.utils.environment_manager import EnvironmentManager
+from codeaide.utils.session_manager import SessionManager
 
 
 class ChatHandler(QObject):
@@ -31,31 +32,21 @@ class ChatHandler(QObject):
     )  # Signal to update chat with (role, message)
     show_code_signal = pyqtSignal(str, str)  # Signal to show code with (code, version)
     traceback_occurred = pyqtSignal(str)
+    session_updated = pyqtSignal()
 
     def __init__(self):
         super().__init__()
-        """
-        Initialize the ChatHandler class.
+        base_dir = get_project_root()
+        self.file_handler = FileHandler(base_dir=base_dir)
+        self.session_manager = SessionManager(base_dir, self.file_handler)
 
-        Args:
-            None
+        self.session_id = None
+        self.session_dir = None
 
-        Returns:
-            None
-        """
-        self.session_id = generate_session_id()
         self.cost_tracker = CostTracker()
-        self.file_handler = FileHandler(session_id=self.session_id)
-        self.session_dir = (
-            self.file_handler.session_dir
-        )  # Store the specific session directory
         self.logger = get_logger()
-        self.conversation_history = self.file_handler.load_chat_history()
-        self.environment_manager = EnvironmentManager(self.session_id)
-        self.terminal_manager = TerminalManager(
-            environment_manager=self.environment_manager,
-            traceback_callback=self.emit_traceback_signal,
-        )
+        self.environment_manager = None
+        self.terminal_manager = None
         self.latest_version = "0.0"
         self.api_client = None
         self.api_key_set = False
@@ -66,17 +57,26 @@ class ChatHandler(QObject):
         self.max_tokens = AI_PROVIDERS[self.current_provider]["models"][
             self.current_model
         ]["max_tokens"]
-        self.env_manager = EnvironmentManager(self.session_id)
 
         self.api_key_valid, self.api_key_message = self.check_api_key()
-        self.logger.info(f"New session started with ID: {self.session_id}")
-        self.logger.info(f"Session directory: {self.session_dir}")
         self.chat_window = None
 
     def start_application(self):
-        from codeaide.ui.chat_window import (
-            ChatWindow,
-        )  # Import here to avoid circular imports
+        from codeaide.ui.chat_window import ChatWindow
+
+        # Create initial session
+        self.session_id = self.session_manager.create_new_session()
+        self.session_dir = self.file_handler.session_dir
+
+        self.conversation_history = self.file_handler.load_chat_history()
+        self.environment_manager = EnvironmentManager(self.session_id)
+        self.terminal_manager = TerminalManager(
+            environment_manager=self.environment_manager,
+            traceback_callback=self.emit_traceback_signal,
+        )
+
+        self.logger.info(f"New session started with ID: {self.session_id}")
+        self.logger.info(f"Session directory: {self.session_dir}")
 
         self.chat_window = ChatWindow(self)
         self.connect_signals()
@@ -333,7 +333,12 @@ class ChatHandler(QObject):
             code_version,
             version_description,
             requirements,
+            session_summary,
         ) = parsed_response
+
+        # Update the session summary
+        if session_summary:
+            self.update_session_summary(session_summary)
 
         if code and self.compare_versions(code_version, self.latest_version) <= 0:
             raise ValueError(
@@ -567,55 +572,70 @@ class ChatHandler(QObject):
     def set_latest_version(self, version):
         self.latest_version = version
 
-    def start_new_session(self, chat_window):
-        self.logger.info("Starting new session")
-
-        # Log the previous session path correctly
-        self.logger.info(f"Previous session path: {self.session_dir}")
-
-        # Generate new session ID
-        new_session_id = generate_session_id()
-
-        # Create new FileHandler with new session ID
-        new_file_handler = FileHandler(session_id=new_session_id)
-
-        # Copy existing log to new session and set up new logger
-        self.file_handler.copy_log_to_new_session(new_session_id)
-        setup_logger(new_file_handler.session_dir)
-
-        # Update instance variables
+    def start_new_session(self, chat_window, based_on=None, initial_session=False):
+        new_session_id = self.session_manager.create_new_session(based_on=based_on)
         self.session_id = new_session_id
-        self.file_handler = new_file_handler
-        self.session_dir = new_file_handler.session_dir  # Update the session directory
+        self.file_handler.set_session_id(new_session_id)
+        self.session_dir = self.file_handler.session_dir
 
-        # Clear conversation history
         self.conversation_history = []
-
-        # Clear chat display in UI
         chat_window.clear_chat_display()
-
-        # Close code pop-up if it exists
         chat_window.close_code_popup()
 
-        # Add system message about previous session
-        system_message = f"A new session has been started. The previous chat will not be visible to the agent. Previous session data saved in: {self.session_dir}"
-        chat_window.add_to_chat("System", system_message)
-        chat_window.add_to_chat("AI", INITIAL_MESSAGE)
+        if not initial_session:
+            # Inform the user that a new session is starting if this is done after an existing session was underway
+            system_message = f"A new session has been started. The previous chat will not be visible to the agent. Previous session data saved in: {self.session_dir}"
+            chat_window.add_to_chat("System", system_message)
+            chat_window.add_to_chat("AI", INITIAL_MESSAGE)
 
         self.logger.info(f"New session started with ID: {self.session_id}")
         self.logger.info(f"New session directory: {self.session_dir}")
 
-    # New method to load a previous session
+        return new_session_id
+
     def load_previous_session(self, session_id, chat_window):
+        if session_id is None:
+            self.logger.error("Attempted to load a session with None id")
+            raise ValueError("Invalid session id: None")
+
         self.logger.info(f"Loading previous session: {session_id}")
-        self.session_id = session_id
-        self.file_handler = FileHandler(session_id=session_id)
+        new_session_id = self.session_manager.load_previous_session(session_id)
+        self.session_id = new_session_id
+        self.file_handler.set_session_id(new_session_id)
         self.session_dir = self.file_handler.session_dir
 
-        # Load chat contents
-        chat_window.load_chat_contents()
+        # Load chat history from the original session
+        self.conversation_history = self.file_handler.load_chat_history(session_id)
 
-        self.logger.info(f"Loaded previous session with ID: {self.session_id}")
+        chat_window.clear_chat_display()
+        # Load chat contents from the original session
+        chat_contents = self.file_handler.load_chat_contents(session_id)
+        for content in chat_contents:
+            if isinstance(content, dict) and "role" in content and "content" in content:
+                chat_window.add_to_chat(content["role"], content["content"])
+            elif (
+                isinstance(content, dict)
+                and "sender" in content
+                and "message" in content
+            ):
+                chat_window.add_to_chat(content["sender"], content["message"])
+            else:
+                self.logger.warning(f"Unexpected chat content format: {content}")
+
+        system_message = f"A new session has been created based on session {session_id}. Previous session data copied to: {self.session_dir}"
+        chat_window.add_to_chat("System", system_message)
+
+        self.logger.info(f"Loaded previous session with ID: {session_id}")
+        self.logger.info(f"Created new session with ID: {new_session_id}")
+
+        return new_session_id
+
+    def update_session_summary(self, summary):
+        self.session_manager.update_session_summary(summary)
+        self.session_updated.emit()
+
+    def get_all_sessions(self):
+        return self.session_manager.get_all_sessions()
 
     def emit_traceback_signal(self, traceback_text):
         self.logger.info(
@@ -638,4 +658,4 @@ class ChatHandler(QObject):
         self.chat_window.on_submit()
 
     def cleanup(self):
-        self.env_manager.cleanup()
+        self.environment_manager.cleanup()
